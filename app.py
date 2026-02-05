@@ -1,75 +1,78 @@
 import streamlit as st
 import yfinance as yf
 import pandas_ta as ta
+import plotly.graph_objects as go
 import time
 
-# Dashboard Page Config
-st.set_page_config(page_title="SANTOSH PRO AI", layout="wide")
+# Page Configuration
+st.set_page_config(page_title="SANTOSH PRO COMMANDER", layout="wide")
 
-# CSS for Futuristic Dark Theme (from your screenshot)
+# Custom CSS for Dark Neon Theme (Reference: image_1fe79e.jpg)
 st.markdown("""
     <style>
-    .main { background-color: #010b14; color: white; }
-    .stApp { background-color: #010b14; }
-    .signal-card { 
-        background: linear-gradient(145deg, #0d1b2a, #1b263b);
-        border-radius: 20px; border: 1px solid #00f2ff;
-        padding: 25px; text-align: center; color: white;
+    .stApp { background-color: #010b14; color: white; }
+    .nav-bar {
+        display: flex; justify-content: space-around;
+        background: #0d1b2a; padding: 15px;
+        border-radius: 15px; border-bottom: 2px solid #00f2ff;
+        margin-bottom: 20px; font-weight: bold; color: #00f2ff;
     }
-    .buy-btn { background-color: #00ff88; color: black; font-weight: bold; border-radius: 10px; padding: 10px 20px; display: inline-block; margin-top: 10px; }
-    .sell-btn { background-color: #ff4b2b; color: white; font-weight: bold; border-radius: 10px; padding: 10px 20px; display: inline-block; margin-top: 10px; }
-    .stock-title { font-size: 24px; font-weight: bold; color: #00f2ff; }
-    .price-text { font-size: 32px; font-weight: bold; }
+    .status-card {
+        background: #0d1b2a; padding: 20px; border-radius: 20px;
+        border: 1px solid #1e3a5f; text-align: center;
+    }
     </style>
     """, unsafe_allow_html=True)
 
-st.title("🛡️ SANTOSH AI COMMAND CENTER")
+# 1. Navigation Bar (Reference: image_1feeca.png)
+st.markdown('<div class="nav-bar"><span>🏠 Home</span><span>📊 Live Chart</span><span style="color:#00ff88">🤖 AI Signals</span><span>🔍 Screener</span></div>', unsafe_allow_html=True)
 
-# Stocks from your interest list
-watchlist = {'RELIANCE': 'RELIANCE.NS', 'NIFTY 50': '^NSEI', 'BANK NIFTY': '^NSEBANK', 'CRUDE OIL': 'CL=F'}
+# 2. Sidebar for Selection
+target_stock = st.sidebar.selectbox("Select Asset to Chart", ["RELIANCE.NS", "^NSEI", "^NSEBANK", "CL=F"])
 
-cols = st.columns(4)
+# 3. Layout: Chart on Left, Signals on Right
+col1, col2 = st.columns([2, 1])
 
-for i, (name, ticker) in enumerate(watchlist.items()):
-    with cols[i]:
-        try:
-            df = yf.download(ticker, period='5d', interval='15m', progress=False)
-            if not df.empty:
-                df['EMA'] = ta.ema(df['Close'], length=20)
-                df['RSI'] = ta.rsi(df['Close'], length=14)
-                
-                price = df['Close'].iloc[-1]
-                rsi = df['RSI'].iloc[-1]
-                ema = df['EMA'].iloc[-1]
-                change = price - df['Close'].iloc[-2]
+with col1:
+    try:
+        # Fetching Data for Chart (Reference: image_1fefa2.png)
+        df = yf.download(target_stock, period='1d', interval='5m', progress=False)
+        if not df.empty:
+            df['EMA'] = ta.ema(df['Close'], length=20)
+            
+            # Creating Candlestick Chart
+            fig = go.Figure(data=[go.Candlestick(
+                x=df.index, open=df['Open'], high=df['High'],
+                low=df['Low'], close=df['Close'], name='Price'
+            )])
+            
+            # Adding EMA Line (The blue/green line in your image)
+            fig.add_trace(go.Scatter(x=df.index, y=df['EMA'], line=dict(color='#00f2ff', width=2), name='20 EMA'))
+            
+            fig.update_layout(
+                title=f"LIVE CHART: {target_stock}",
+                template="plotly_dark",
+                plot_bgcolor="#010b14", paper_bgcolor="#010b14",
+                xaxis_rangeslider_visible=False,
+                height=500
+            )
+            st.plotly_chart(fig, use_container_width=True)
+    except:
+        st.write("Chart Loading...")
 
-                # SIGNAL LOGIC (EMA + RSI 62/35)
-                status = "NEUTRAL"
-                signal_class = "wait-bg"
-                btn_html = "WAITING"
+with col2:
+    st.markdown('<div class="status-card">', unsafe_allow_html=True)
+    st.header("AI SIGNALS")
+    # Quick signals for watchlist
+    for name, sym in {'NIFTY': '^NSEI', 'RELIANCE': 'RELIANCE.NS', 'CRUDE': 'CL=F'}.items():
+        sd = yf.download(sym, period='1d', interval='15m', progress=False)
+        if not sd.empty:
+            price = sd['Close'].iloc[-1]
+            rsi = ta.rsi(sd['Close'], length=14).iloc[-1]
+            color = "#00ff88" if rsi > 60 else "#ff4b2b" if rsi < 40 else "#ffffff"
+            st.markdown(f"**{name}**: <span style='color:{color}'>₹{price:.1f} (RSI: {rsi:.1f})</span>", unsafe_allow_html=True)
+    st.markdown('</div>', unsafe_allow_html=True)
 
-                if price > ema and rsi > 62:
-                    status = "STRONG BULLISH"
-                    btn_html = '<div class="buy-btn">BUY SIGNAL</div>'
-                elif price < ema and rsi < 35:
-                    status = "STRONG BEARISH"
-                    btn_html = '<div class="sell-btn">SELL SIGNAL</div>'
-
-                # Display Card
-                st.markdown(f'''
-                    <div class="signal-card">
-                        <div class="stock-title">{name}</div>
-                        <div class="price-text">₹{price:.2f}</div>
-                        <div style="color: {"#00ff88" if change > 0 else "#ff4b2b"}">{change:+.2f}</div>
-                        <hr style="border: 0.5px solid #00f2ff">
-                        <p>RSI: {rsi:.1f} | EMA: {ema:.1f}</p>
-                        <p>{status}</p>
-                        {btn_html}
-                    </div>
-                ''', unsafe_allow_html=True)
-        except:
-            st.write("📡 Scanning...")
-
-# Automatic fast refresh for scalping
-time.sleep(15)
+# Auto-refresh
+time.sleep(30)
 st.rerun()
