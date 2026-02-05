@@ -10,10 +10,10 @@ if token:
         url = "https://api.dhan.co/v2/marketfeed/ltp"
         headers = {'access-token': token, 'Content-Type': 'application/json'}
         
-        # Dhan MCX Crude Oil Feb Fut Security ID: 63
+        # Dhan official symbol for Crude Oil Feb
         payload = {
             "instruments": [
-                {"symbol": "CRUDEOIL FEB FUT", "exchange": "MCX", "instrument_type": "FUTCOM", "security_id": "63"}
+                {"symbol": "CRUDEOIL FEB FUT", "exchange": "MCX", "instrument_type": "FUTCOM"}
             ]
         }
         
@@ -23,16 +23,17 @@ if token:
         if response.status_code == 200:
             price_dict = data.get('data', {})
             if price_dict:
-                # Key format se price nikalna
+                # Direct value nikalna
                 price = list(price_dict.values())[0]
                 st.header(f"CRUDE OIL: Rs {price}")
                 st.success("LIVE MATCHED")
             else:
-                st.warning("Empty Data: Please check if 'Data APIs' toggle is GREEN in Dhan Profile.")
+                # Agar phir bhi None aaye toh response print karke check karte hain
+                st.warning("Server connected but no price. Check Data API switch in Dhan Profile.")
         else:
             st.error(f"Dhan Error: {data.get('remarks')}")
             
     except Exception as e:
         st.error(f"System Error: {e}")
 else:
-    st.info("Paste 'OfficeScanner' Token in Sidebar")
+    st.info("Paste Token in Sidebar")
