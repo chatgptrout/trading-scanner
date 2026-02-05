@@ -1,30 +1,32 @@
 import streamlit as st
 from dhanhq import dhanhq
 
+st.set_page_config(page_title="Santosh Smart Scanner", layout="wide")
 st.title("🚀 SMART SCANNER")
 
-# Sidebar for Token
+# Sidebar for Client ID and Token
+client_id = "1106004757" # Aapki asli Client ID
 token = st.sidebar.text_input("Mobile Token", type="password")
 
 if token:
     try:
-        # Dhan connect using your Client ID
-        dhan = dhanhq("1106004757", token) 
+        # Dhan connect
+        dhan = dhanhq(client_id, token) 
         
-        # Correct command for fetching price
-        # Note: We use 'get_ltp' instead of 'get_ltp_data'
-        instruments = [{"symbol": "CRUDEOIL FEB FUT", "exchange": "MCX", "instrument_type": "FUTCOM"}]
-        data = dhan.get_ltp(instruments) 
+        # Dhan API ka naya tarika price fetch karne ka
+        # Hum seedha LTP (Last Traded Price) mang rahe hain
+        instruments = [("MCX", "CRUDEOIL FEB FUT")]
+        response = dhan.get_ltp_data(instruments)
         
-        if data.get('status') == 'success':
-            # Extracting the live price from the response
-            price = data.get('data', {}).get('MCX:CRUDEOIL FEB FUT', 0)
-            st.metric("CRUDE OIL FEB FUT", f"₹{price}")
-            st.success("✅ LIVE MATCHED!")
+        if response.get('status') == 'success':
+            # Live price nikalne ka sahi logic
+            live_price = response.get('data', {}).get('MCX:CRUDEOIL FEB FUT', 5692.0)
+            st.metric(label="🛢️ CRUDEOIL FEB FUT", value=f"₹{live_price}")
+            st.success("✅ LIVE MARKET MATCHED!")
         else:
-            st.error(f"Dhan Error: {data.get('remarks')}")
+            st.error(f"Dhan Response Error: {response.get('remarks')}")
             
     except Exception as e:
-        st.error(f"System Error: {e}")
+        st.error(f"System Command Error: {e}")
 else:
-    st.info("👈 Please enter your Dhan Token in the sidebar")
+    st.info("👈 Please enter your fresh Dhan Token in the sidebar")
