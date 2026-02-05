@@ -1,14 +1,14 @@
- import streamlit as st
+import streamlit as st
 import requests
 
-st.title("🚀 SANTOSH SMART SCANNER")
+st.set_page_config(page_title="Santosh Smart Scanner", layout="wide")
+st.title("🚀 SMART SCANNER")
 
 # Sidebar
 token = st.sidebar.text_input("Mobile Token", type="password")
 
 if token:
     try:
-        # Direct Call to Dhan API
         url = "https://api.dhan.co/v2/marketfeed/ltp"
         headers = {'access-token': token, 'Content-Type': 'application/json'}
         payload = {"instruments": [{"symbol": "CRUDEOIL FEB FUT", "exchange": "MCX"}]}
@@ -17,10 +17,9 @@ if token:
         data = response.json()
         
         if response.status_code == 200:
-            # Match with Live Market (5,692.00)
             price = data.get('data', {}).get('MCX:CRUDEOIL FEB FUT', 0)
             st.metric("CRUDE OIL FEB FUT", f"₹{price}")
-            st.success("✅ DATA MATCHED LIVE!")
+            st.success("✅ LIVE MATCHED!")
         else:
             st.error(f"Dhan Error: {data.get('remarks')}")
     except Exception as e:
