@@ -1,19 +1,20 @@
 import streamlit as st
 import requests
 
-st.title("SANTOSH SCANNER")
+st.set_page_config(page_title="Santosh Scanner", layout="wide")
+st.title("SANTOSH SMART SCANNER")
 
-token = st.sidebar.text_input("Mobile Token", type="password")
+token = st.sidebar.text_input("Dhan Token", type="password")
 
 if token:
     try:
         url = "https://api.dhan.co/v2/marketfeed/ltp"
         headers = {'access-token': token, 'Content-Type': 'application/json'}
         
-        # Dhan official symbol for Crude Oil Feb
+        # MCX Crude Oil Feb Fut Security ID is 63
         payload = {
             "instruments": [
-                {"symbol": "CRUDEOIL FEB FUT", "exchange": "MCX", "instrument_type": "FUTCOM"}
+                {"symbol": "CRUDEOIL FEB FUT", "exchange": "MCX", "instrument_type": "FUTCOM", "security_id": "63"}
             ]
         }
         
@@ -21,19 +22,17 @@ if token:
         data = response.json()
         
         if response.status_code == 200:
-            price_dict = data.get('data', {})
-            if price_dict:
-                # Direct value nikalna
-                price = list(price_dict.values())[0]
-                st.header(f"CRUDE OIL: Rs {price}")
-                st.success("LIVE MATCHED")
+            prices = data.get('data', {})
+            if prices:
+                # Direct value extraction
+                current_price = list(prices.values())[0]
+                st.metric("CRUDE OIL FEB FUT", f"Rs {current_price}")
+                st.success("LIVE DATA MATCHED")
             else:
-                # Agar phir bhi None aaye toh response print karke check karte hain
-                st.warning("Server connected but no price. Check Data API switch in Dhan Profile.")
+                st.warning("Dhan server returned no price. Please check if 'Data APIs' is Green in Dhan Profile.")
         else:
             st.error(f"Dhan Error: {data.get('remarks')}")
-            
     except Exception as e:
         st.error(f"System Error: {e}")
 else:
-    st.info("Paste Token in Sidebar")
+    st.info("Please paste 'OfficeScanner' token in the sidebar.")
