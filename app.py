@@ -1,37 +1,40 @@
 import streamlit as st
 import yfinance as yf
+import time
 
-st.set_page_config(page_title="Santosh Stock Tracker", layout="wide")
-st.title("SANTOSH SMART SCANNER")
+st.set_page_config(page_title="Santosh Auto-Scanner", layout="wide")
+st.title("SANTOSH AUTOMATIC LIVE SCANNER")
 
-# Sidebar for Stock Selection
-st.sidebar.header("Select What to Watch")
-option = st.sidebar.selectbox(
-    'Instrument',
-    ('NIFTY 50', 'BANK NIFTY', 'RELIANCE', 'TATA MOTORS', 'CRUDE OIL')
-)
+# 1. Automatic Refresh Logic (Har 30 second mein reload hoga)
+# Streamlit mein auto-refresh ke liye hum ye simple trick use kar rahe hain
+if "count" not in st.session_state:
+    st.session_state.count = 0
 
-# Mapping Symbols for Yahoo Finance
-symbols = {
+# 2. Watchlist (Aap yahan aur bhi stocks add kar sakte hain)
+watchlist = {
     'NIFTY 50': '^NSEI',
     'BANK NIFTY': '^NSEBANK',
     'RELIANCE': 'RELIANCE.NS',
-    'TATA MOTORS': 'TATAMOTORS.NS',
-    'CRUDE OIL': 'CL=F'
+    'CRUDE OIL': 'CL=F',
+    'TATA MOTORS': 'TATAMOTORS.NS'
 }
 
-ticker = symbols[option]
+# Layout: 3 Columns banate hain taaki sab ek saath dikhe
+cols = st.columns(3)
 
-try:
-    data = yf.Ticker(ticker)
-    price = data.fast_info['last_price']
-    prev_close = data.fast_info['previous_close']
-    change = price - prev_close
-    percent_change = (change / prev_close) * 100
+for i, (name, ticker) in enumerate(watchlist.items()):
+    with cols[i % 3]:
+        try:
+            data = yf.Ticker(ticker)
+            info = data.fast_info
+            price = info['last_price']
+            change = price - info['previous_close']
+            
+            # Displaying Metric
+            st.metric(label=name, value=f"{price:.2f}", delta=f"{change:.2f}")
+        except:
+            st.error(f"Error loading {name}")
 
-    # Display results
-    st.metric(label=option, value=f"{price:.2f}", delta=f"{change:.2f} ({percent_change:.2f}%)")
-    st.success(f"LIVE: {option} matched successfully!")
-
-except Exception as e:
-    st.error(f"Error fetching {option}: {e}")
+# Auto-refresh mechanism
+time.sleep(30)
+st.rerun()
