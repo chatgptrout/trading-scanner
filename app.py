@@ -10,14 +10,10 @@ if token:
         url = "https://api.dhan.co/v2/marketfeed/ltp"
         headers = {'access-token': token, 'Content-Type': 'application/json'}
         
-        # Dhan official format for MCX Crude Oil Feb Future
+        # Dhan MCX Crude Oil Feb Fut Security ID: 63
         payload = {
             "instruments": [
-                {
-                    "symbol": "CRUDEOIL FEB FUT", 
-                    "exchange": "MCX", 
-                    "instrument_type": "FUTCOM"
-                }
+                {"symbol": "CRUDEOIL FEB FUT", "exchange": "MCX", "instrument_type": "FUTCOM", "security_id": "63"}
             ]
         }
         
@@ -27,12 +23,12 @@ if token:
         if response.status_code == 200:
             price_dict = data.get('data', {})
             if price_dict:
-                # Is tarike se data 100% milega chahe key ka format kuch bhi ho
+                # Key format se price nikalna
                 price = list(price_dict.values())[0]
                 st.header(f"CRUDE OIL: Rs {price}")
                 st.success("LIVE MATCHED")
             else:
-                st.warning("Empty Data: Please check if 'Data APIs' is ON in Dhan Profile.")
+                st.warning("Empty Data: Please check if 'Data APIs' toggle is GREEN in Dhan Profile.")
         else:
             st.error(f"Dhan Error: {data.get('remarks')}")
             
