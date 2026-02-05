@@ -8,14 +8,16 @@ token = st.sidebar.text_input("Mobile Token", type="password")
 
 if token:
     try:
-        # Dhan connect - 100% Asli Client ID
+        # Dhan connect using your Client ID
         dhan = dhanhq("1106004757", token) 
         
-        # Crude Oil Data Fetch
-        # Instrument type 'FUTCOM' for MCX Crude
-        data = dhan.get_ltp_data([{"symbol": "CRUDEOIL FEB FUT", "exchange": "MCX", "instrument_type": "FUTCOM"}])
+        # Correct command for fetching price
+        # Note: We use 'get_ltp' instead of 'get_ltp_data'
+        instruments = [{"symbol": "CRUDEOIL FEB FUT", "exchange": "MCX", "instrument_type": "FUTCOM"}]
+        data = dhan.get_ltp(instruments) 
         
         if data.get('status') == 'success':
+            # Extracting the live price from the response
             price = data.get('data', {}).get('MCX:CRUDEOIL FEB FUT', 0)
             st.metric("CRUDE OIL FEB FUT", f"₹{price}")
             st.success("✅ LIVE MATCHED!")
