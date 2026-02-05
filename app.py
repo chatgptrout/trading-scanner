@@ -3,30 +3,37 @@ import yfinance as yf
 import pandas_ta as ta
 import time
 
-st.set_page_config(page_title="SANTOSH BULL-BEAR AI", layout="wide")
+# Dashboard Page Config
+st.set_page_config(page_title="SANTOSH PRO AI", layout="wide")
 
-# Stylish CSS for signals
+# CSS for Futuristic Dark Theme (from your screenshot)
 st.markdown("""
     <style>
-    .signal-box { padding: 30px; border-radius: 20px; text-align: center; color: white; font-family: sans-serif; }
-    .bullish { background: linear-gradient(135deg, #00b09b, #96c93d); border: 5px solid #ffffff; }
-    .bearish { background: linear-gradient(135deg, #cb2d3e, #ef473a); border: 5px solid #ffffff; }
-    .neutral { background: #2c3e50; opacity: 0.8; }
-    .symbol-font { font-size: 80px; margin: 0; }
-    .price-font { font-size: 40px; font-weight: bold; }
+    .main { background-color: #010b14; color: white; }
+    .stApp { background-color: #010b14; }
+    .signal-card { 
+        background: linear-gradient(145deg, #0d1b2a, #1b263b);
+        border-radius: 20px; border: 1px solid #00f2ff;
+        padding: 25px; text-align: center; color: white;
+    }
+    .buy-btn { background-color: #00ff88; color: black; font-weight: bold; border-radius: 10px; padding: 10px 20px; display: inline-block; margin-top: 10px; }
+    .sell-btn { background-color: #ff4b2b; color: white; font-weight: bold; border-radius: 10px; padding: 10px 20px; display: inline-block; margin-top: 10px; }
+    .stock-title { font-size: 24px; font-weight: bold; color: #00f2ff; }
+    .price-text { font-size: 32px; font-weight: bold; }
     </style>
     """, unsafe_allow_html=True)
 
-st.title("🏹 SANTOSH MOMENTUM TRACKER")
+st.title("🛡️ SANTOSH AI COMMAND CENTER")
 
-watchlist = {'NIFTY 50': '^NSEI', 'BANK NIFTY': '^NSEBANK', 'RELIANCE': 'RELIANCE.NS', 'CRUDE OIL': 'CL=F', 'TATA MOTORS': 'TATAMOTORS.NS'}
+# Stocks from your interest list
+watchlist = {'RELIANCE': 'RELIANCE.NS', 'NIFTY 50': '^NSEI', 'BANK NIFTY': '^NSEBANK', 'CRUDE OIL': 'CL=F'}
 
-cols = st.columns(len(watchlist))
+cols = st.columns(4)
 
 for i, (name, ticker) in enumerate(watchlist.items()):
     with cols[i]:
         try:
-            df = yf.download(ticker, period='2d', interval='5m', progress=False)
+            df = yf.download(ticker, period='5d', interval='15m', progress=False)
             if not df.empty:
                 df['EMA'] = ta.ema(df['Close'], length=20)
                 df['RSI'] = ta.rsi(df['Close'], length=14)
@@ -34,31 +41,35 @@ for i, (name, ticker) in enumerate(watchlist.items()):
                 price = df['Close'].iloc[-1]
                 rsi = df['RSI'].iloc[-1]
                 ema = df['EMA'].iloc[-1]
+                change = price - df['Close'].iloc[-2]
 
-                # BULLISH/BEARISH LOGIC
+                # SIGNAL LOGIC (EMA + RSI 62/35)
+                status = "NEUTRAL"
+                signal_class = "wait-bg"
+                btn_html = "WAITING"
+
                 if price > ema and rsi > 62:
-                    st.markdown(f'''<div class="signal-box bullish">
-                        <p class="symbol-font">🐂</p>
-                        <h3>{name}</h3>
-                        <p class="price-font">₹{price:.1f}</p>
-                        <p>BULLISH MOVEMENT</p>
-                    </div>''', unsafe_allow_html=True)
+                    status = "STRONG BULLISH"
+                    btn_html = '<div class="buy-btn">BUY SIGNAL</div>'
                 elif price < ema and rsi < 35:
-                    st.markdown(f'''<div class="signal-box bearish">
-                        <p class="symbol-font">🐻</p>
-                        <h3>{name}</h3>
-                        <p class="price-font">₹{price:.1f}</p>
-                        <p>BEARISH MOVEMENT</p>
-                    </div>''', unsafe_allow_html=True)
-                else:
-                    st.markdown(f'''<div class="signal-box neutral">
-                        <p class="symbol-font">⚖️</p>
-                        <h3>{name}</h3>
-                        <p class="price-font">₹{price:.1f}</p>
-                        <p>WAITING...</p>
-                    </div>''', unsafe_allow_html=True)
-        except:
-            st.write("🔄")
+                    status = "STRONG BEARISH"
+                    btn_html = '<div class="sell-btn">SELL SIGNAL</div>'
 
+                # Display Card
+                st.markdown(f'''
+                    <div class="signal-card">
+                        <div class="stock-title">{name}</div>
+                        <div class="price-text">₹{price:.2f}</div>
+                        <div style="color: {"#00ff88" if change > 0 else "#ff4b2b"}">{change:+.2f}</div>
+                        <hr style="border: 0.5px solid #00f2ff">
+                        <p>RSI: {rsi:.1f} | EMA: {ema:.1f}</p>
+                        <p>{status}</p>
+                        {btn_html}
+                    </div>
+                ''', unsafe_allow_html=True)
+        except:
+            st.write("📡 Scanning...")
+
+# Automatic fast refresh for scalping
 time.sleep(15)
 st.rerun()
