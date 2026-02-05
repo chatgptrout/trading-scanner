@@ -2,24 +2,27 @@ import streamlit as st
 from dhanhq import dhanhq
 
 st.title("🚀 SMART SCANNER")
+
+# Sidebar for Token
 token = st.sidebar.text_input("Mobile Token", type="password")
 
 if token:
     try:
-        # Dhan connect - Yahan apni sahi Client ID dalna zaroori hai
+        # Dhan connect - 100% Asli Client ID
         dhan = dhanhq("1106004757", token) 
         
         # Crude Oil Data Fetch
-        instruments = [{"symbol": "CRUDEOIL FEB FUT", "exchange": "MCX", "instrument_type": "FUTCOM"}]
-        data = dhan.get_ltp_data(instruments)
+        # Instrument type 'FUTCOM' for MCX Crude
+        data = dhan.get_ltp_data([{"symbol": "CRUDEOIL FEB FUT", "exchange": "MCX", "instrument_type": "FUTCOM"}])
         
-        # Price Match
-        price = data.get('data', {}).get('MCX:CRUDEOIL FEB FUT', 5692.0)
-        
-        st.metric("CRUDE OIL FEB FUT", f"₹{price}")
-        st.success("SUCCESS: Data Matched with Dhan Live!")
-    except:
-        st.error("Technical Error: Please check Client ID and Token")
+        if data.get('status') == 'success':
+            price = data.get('data', {}).get('MCX:CRUDEOIL FEB FUT', 0)
+            st.metric("CRUDE OIL FEB FUT", f"₹{price}")
+            st.success("✅ LIVE MATCHED!")
+        else:
+            st.error(f"Dhan Error: {data.get('remarks')}")
+            
+    except Exception as e:
+        st.error(f"System Error: {e}")
 else:
-    st.warning("Awaiting Token from Sidebar...")
-
+    st.info("👈 Please enter your Dhan Token in the sidebar")
