@@ -7,7 +7,7 @@ token = st.sidebar.text_input("Mobile Token", type="password")
 if token:
     try:
         # Dhan connect - Yahan apni sahi Client ID dalna zaroori hai
-        dhan = dhanhq("SANTOSHKUMAR_ID", token) 
+        dhan = dhanhq("1106004757", token) 
         
         # Crude Oil Data Fetch
         instruments = [{"symbol": "CRUDEOIL FEB FUT", "exchange": "MCX", "instrument_type": "FUTCOM"}]
@@ -22,3 +22,4 @@ if token:
         st.error("Technical Error: Please check Client ID and Token")
 else:
     st.warning("Awaiting Token from Sidebar...")
+
