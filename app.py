@@ -7,14 +7,17 @@ token = st.sidebar.text_input("Mobile Token", type="password")
 
 if token:
     try:
-        # Market Feed URL
         url = "https://api.dhan.co/v2/marketfeed/ltp"
         headers = {'access-token': token, 'Content-Type': 'application/json'}
         
-        # Sabse simple symbol format jo Dhan accept karta hai
+        # Exact format for MCX Crude Oil Feb Future
         payload = {
             "instruments": [
-                {"symbol": "CRUDEOIL FEB FUT", "exchange": "MCX", "instrument_type": "FUTCOM"}
+                {
+                    "symbol": "CRUDEOIL FEB FUT", 
+                    "exchange": "MCX", 
+                    "instrument_type": "FUTCOM"
+                }
             ]
         }
         
@@ -22,15 +25,14 @@ if token:
         data = response.json()
         
         if response.status_code == 200:
-            price_data = data.get('data', {})
-            # Agar dictionary khali nahi hai toh price dikhao
-            if price_data:
-                # 'MCX:CRUDEOIL FEB FUT' key se data nikalna
-                price = price_data.get('MCX:CRUDEOIL FEB FUT', 0)
+            price_dict = data.get('data', {})
+            if price_dict:
+                # Key format 'EXCHANGE:SYMBOL'
+                price = price_dict.get('MCX:CRUDEOIL FEB FUT', 0)
                 st.header(f"CRUDE OIL: Rs {price}")
                 st.success("LIVE MATCHED")
             else:
-                st.warning("Dhan returned empty data. Check if 'Data APIs' is ON in Dhan Profile.")
+                st.warning("Empty Data: Check if 'Data APIs' is ON in Dhan Profile.")
         else:
             st.error(f"Dhan Error: {data.get('remarks')}")
             
