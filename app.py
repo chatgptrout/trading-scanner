@@ -1,16 +1,12 @@
 import streamlit as st
 import yfinance as yf
+import pandas as pd
+import pandas_ta as ta
 import time
 
-st.set_page_config(page_title="Santosh Auto-Scanner", layout="wide")
-st.title("SANTOSH AUTOMATIC LIVE SCANNER")
+st.set_page_config(page_title="Santosh AI Scanner", layout="wide")
+st.title("SANTOSH AI BUY/SELL SCANNER (EMA + RSI)")
 
-# 1. Automatic Refresh Logic (Har 30 second mein reload hoga)
-# Streamlit mein auto-refresh ke liye hum ye simple trick use kar rahe hain
-if "count" not in st.session_state:
-    st.session_state.count = 0
-
-# 2. Watchlist (Aap yahan aur bhi stocks add kar sakte hain)
 watchlist = {
     'NIFTY 50': '^NSEI',
     'BANK NIFTY': '^NSEBANK',
@@ -19,22 +15,39 @@ watchlist = {
     'TATA MOTORS': 'TATAMOTORS.NS'
 }
 
-# Layout: 3 Columns banate hain taaki sab ek saath dikhe
-cols = st.columns(3)
+cols = st.columns(len(watchlist))
 
 for i, (name, ticker) in enumerate(watchlist.items()):
-    with cols[i % 3]:
+    with cols[i]:
         try:
-            data = yf.Ticker(ticker)
-            info = data.fast_info
-            price = info['last_price']
-            change = price - info['previous_close']
-            
-            # Displaying Metric
-            st.metric(label=name, value=f"{price:.2f}", delta=f"{change:.2f}")
-        except:
-            st.error(f"Error loading {name}")
+            # Data for Indicator calculation
+            df = yf.download(ticker, period='5d', interval='15m', progress=False)
+            if not df.empty:
+                # Indicators: 20 EMA and 14 RSI
+                df['EMA_20'] = ta.ema(df['Close'], length=20)
+                df['RSI'] = ta.rsi(df['Close'], length=14)
+                
+                current_price = df['Close'].iloc[-1]
+                current_rsi = df['RSI'].iloc[-1]
+                current_ema = df['EMA_20'].iloc[-1]
+                
+                # Logic: Buy if Price > EMA and RSI > 62
+                # Logic: Sell if Price < EMA and RSI < 35
+                st.subheader(name)
+                st.write(f"Price: ₹{current_price:.2f}")
+                st.write(f"RSI: {current_rsi:.1f}")
 
-# Auto-refresh mechanism
+                if current_price > current_ema and current_rsi > 62:
+                    st.success("🚀 STRONG BUY")
+                    st.toast(f"{name} Buy Signal!")
+                elif current_price < current_ema and current_rsi < 35:
+                    st.error("📉 STRONG SELL")
+                    st.toast(f"{name} Sell Signal!")
+                else:
+                    st.warning("⏳ WAIT / NEUTRAL")
+        except:
+            st.write(f"Scanning {name}...")
+
+# Auto-refresh every 30 seconds for office monitoring
 time.sleep(30)
 st.rerun()
