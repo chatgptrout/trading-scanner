@@ -1,33 +1,42 @@
 import streamlit as st
 import requests
 
-st.title("SANTOSH SMART SCANNER")
+st.title("SANTOSH SCANNER")
 
 token = st.sidebar.text_input("Mobile Token", type="password")
 
 if token:
     try:
+        # Direct API URL
         url = "https://api.dhan.co/v2/marketfeed/ltp"
         headers = {'access-token': token, 'Content-Type': 'application/json'}
-        # Corrected Symbol for MCX
-        payload = {"instruments": [{"symbol": "CRUDEOIL-FEB-FUT", "exchange": "MCX"}]}
+        
+        # Exact Symbol match for MCX Crude Oil Feb Future
+        payload = {
+            "instruments": [
+                {"symbol": "CRUDEOIL FEB FUT", "exchange": "MCX", "instrument_type": "FUTCOM"}
+            ]
+        }
         
         response = requests.post(url, headers=headers, json=payload)
         data = response.json()
         
         if response.status_code == 200:
-            # Live Match Logic
-            price = data.get('data', {}).get('MCX:CRUDEOIL-FEB-FUT', 0)
-            if price == 0:
-                # Backup if symbol is slightly different
-                price = list(data.get('data', {}).values())[0] if data.get('data') else 0
-                
-            st.metric("CRUDE OIL PRICE", f"Rs {price}")
-            st.success("LIVE MATCHED!")
+            # Checking if data exists
+            prices = data.get('data', {})
+            if prices:
+                # Loop to find the price even if key format changes
+                val = list(prices.values())[0]
+                st.header(f"PRICE: Rs {val}")
+                st.success("CONNECTED")
+            else:
+                st.warning("Market Data Empty - Check Token or Symbol")
         else:
             st.error(f"Dhan Error: {data.get('remarks')}")
+            
     except Exception as e:
         st.error(f"System Error: {e}")
 else:
-    st.info("Please Paste 'OfficeScanner' Token")
+    st.info("Paste Token in Sidebar")
+
 
