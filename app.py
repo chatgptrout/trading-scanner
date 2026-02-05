@@ -3,18 +3,19 @@ import requests
 
 st.title("SANTOSH SCANNER")
 
+# Sidebar inputs
+client_id = st.sidebar.text_input("Dhan Client ID")
 token = st.sidebar.text_input("Dhan Token", type="password")
 
-if token:
+if client_id and token:
     try:
         url = "https://api.dhan.co/v2/marketfeed/ltp"
         headers = {
             'access-token': token,
-            'Content-Type': 'application/json',
-            'Accept': 'application/json'
+            'client-id': client_id,
+            'Content-Type': 'application/json'
         }
         
-        # Crude Oil Feb Fut (Security ID 63) - No Emojis, No Extra Text
         payload = {
             "instruments": [
                 {
@@ -32,16 +33,15 @@ if token:
             data = response.json()
             price_dict = data.get('data', {})
             if price_dict:
-                # Direct value extraction
                 price = list(price_dict.values())[0]
                 st.header(f"CRUDE OIL: Rs {price}")
                 st.success("LIVE MATCHED")
             else:
-                st.warning("Connected but No Data. Check 'Data APIs' toggle in Dhan Profile.")
+                st.warning("Data empty. Check 'Data APIs' switch in Dhan Profile.")
         else:
-            st.error(f"Dhan Status: {response.status_code} - {response.text}")
+            st.error(f"Dhan Error: {response.status_code} - {response.text}")
             
     except Exception as e:
         st.error(f"System Error: {e}")
 else:
-    st.info("Paste 'OfficeScanner' Token in Sidebar")
+    st.info("Enter Client ID and Token in Sidebar")
