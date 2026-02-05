@@ -1,39 +1,37 @@
 import streamlit as st
 import yfinance as yf
-import pandas as pd
 
-st.set_page_config(page_title="Santosh Free Scanner", layout="wide")
-st.title("SANTOSH FREE SMART SCANNER")
+st.set_page_config(page_title="Santosh Stock Tracker", layout="wide")
+st.title("SANTOSH SMART SCANNER")
 
-# Crude Oil Feb Future (MCX) ka Yahoo symbol usually ye hota hai
-# Note: Yahoo par commodity data thoda delay ho sakta hai
-symbol = "CL=F" # Ye International Crude hai, MCX ke liye 'CRUDEOIL26FEB.F' try karein
+# Sidebar for Stock Selection
+st.sidebar.header("Select What to Watch")
+option = st.sidebar.selectbox(
+    'Instrument',
+    ('NIFTY 50', 'BANK NIFTY', 'RELIANCE', 'TATA MOTORS', 'CRUDE OIL')
+)
 
-st.sidebar.header("Market Watch")
-market_type = st.sidebar.selectbox("Select Market", ["Crude Oil", "Nifty 50"])
+# Mapping Symbols for Yahoo Finance
+symbols = {
+    'NIFTY 50': '^NSEI',
+    'BANK NIFTY': '^NSEBANK',
+    'RELIANCE': 'RELIANCE.NS',
+    'TATA MOTORS': 'TATAMOTORS.NS',
+    'CRUDE OIL': 'CL=F'
+}
 
-if market_type == "Crude Oil":
-    ticker_symbol = "CL=F"
-    label = "CRUDE OIL (Global)"
-else:
-    ticker_symbol = "^NSEI"
-    label = "NIFTY 50"
+ticker = symbols[option]
 
 try:
-    # Data fetch kar rahe hain
-    with st.spinner('Fetching Live Data...'):
-        data = yf.Ticker(ticker_symbol)
-        # Fast info se current price nikalna
-        current_price = data.fast_info['last_price']
-        prev_close = data.fast_info['previous_close']
-        change = current_price - prev_close
-        
-        # Display Price
-        st.metric(label=label, value=f"{current_price:.2f}", delta=f"{change:.2f}")
-        
-        st.success("LIVE DATA CONNECTED (FREE)")
-        st.info("Note: Yahoo Finance data 1-15 minute delay ho sakta hai.")
+    data = yf.Ticker(ticker)
+    price = data.fast_info['last_price']
+    prev_close = data.fast_info['previous_close']
+    change = price - prev_close
+    percent_change = (change / prev_close) * 100
+
+    # Display results
+    st.metric(label=option, value=f"{price:.2f}", delta=f"{change:.2f} ({percent_change:.2f}%)")
+    st.success(f"LIVE: {option} matched successfully!")
 
 except Exception as e:
-    st.error(f"System Error: {e}")
-    st.info("Tip: Kabhi kabhi Yahoo server busy hota hai, 1 minute baad refresh karein.")
+    st.error(f"Error fetching {option}: {e}")
