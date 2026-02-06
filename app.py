@@ -6,7 +6,7 @@ import time
 from datetime import datetime
 
 # 1. Page Configuration
-st.set_page_config(layout="wide", page_title="Santosh Ultimate Turbo", initial_sidebar_state="collapsed")
+st.set_page_config(layout="wide", page_title="Santosh Turbo Pro", initial_sidebar_state="collapsed")
 
 # Professional UI Styling
 st.markdown("""
@@ -14,31 +14,30 @@ st.markdown("""
     .stApp { background-color: #050505; color: white; }
     .signal-card { padding: 12px; border-radius: 8px; border: 1px solid #333; text-align: center; background-color: #111; margin-bottom: 10px; }
     .priority-medium { color: black; background-color: #ffca28; padding: 4px 12px; border-radius: 20px; font-weight: bold; font-size: 11px; }
-    .portfolio-box { background-color: #0d1117; padding: 20px; border-radius: 10px; border: 1px solid #30363d; margin-top: 25px; }
+    .health-box { background-color: #1a1a1a; padding: 15px; border-left: 5px solid #ffca28; border-radius: 5px; margin-top: 20px; }
     </style>
     """, unsafe_allow_html=True)
 
-# 2. Turbo Data Fetching (Cached)
+# 2. Fast Data Engine
 @st.cache_data(ttl=60)
 def fetch_turbo_data(tickers):
     return yf.download(tickers, period="2d", interval="5m", group_by='ticker', progress=False)
 
 # Watchlists
 main_indices = {"NIFTY 50": "^NSEI", "BANK NIFTY": "^NSEBANK", "CRUDE OIL": "CL=F", "NAT GAS": "NG=F", "GOLD": "GC=F", "SILVER": "SI=F"}
-power_watchlist = ["RELIANCE", "TCS", "HDFCBANK", "ICICIBANK", "SBIN", "INFY", "TATAMOTORS", "POWERGRID", "DLF", "GNFC"]
+power_list = ["RELIANCE", "TCS", "HDFCBANK", "ICICIBANK", "SBIN", "INFY", "TATAMOTORS", "POWERINDIA", "DLF", "GNFC", "HAL", "BEL"]
 
 # --- APP LAYOUT ---
-st.title("📟 Santosh Turbo Command Center")
-st.write(f"Turbo Mode Active | Last Sync: {datetime.now().strftime('%H:%M:%S')}")
+st.title("📟 Santosh Master Turbo Terminal")
+st.write(f"Turbo Mode ON | {datetime.now().strftime('%H:%M:%S')}")
 
 # A. TOP BAR CARDS
 top_cols = st.columns(len(main_indices))
 for i, (name, sym) in enumerate(main_indices.items()):
     try:
-        idx_data = yf.Ticker(sym).history(period="1d", interval="5m")
-        if not idx_data.empty:
-            cmp = round(idx_data['Close'].iloc[-1], 2)
-            prev = idx_data['Close'].iloc[-2]
+        idx = yf.Ticker(sym).history(period="1d", interval="5m")
+        if not idx.empty:
+            cmp, prev = round(idx['Close'].iloc[-1], 2), idx['Close'].iloc[-2]
             status, col = ("BULLISH", "#2ecc71") if cmp > prev else ("BEARISH", "#e74c3c")
             with top_cols[i]:
                 st.markdown(f"<div class='signal-card'><small>{name}</small><h3 style='color:{col}; margin:5px 0;'>{status}</h3><b>{cmp}</b></div>", unsafe_allow_html=True)
@@ -46,12 +45,12 @@ for i, (name, sym) in enumerate(main_indices.items()):
 
 st.markdown("---")
 
-# B. DATA ENGINE
-all_tickers = [t + ".NS" for t in power_watchlist]
+# B. DATA PROCESSING
+all_tickers = [t + ".NS" for t in power_list]
 raw_data = fetch_turbo_data(all_tickers)
 signals, bulls, bears = [], 0, 0
 
-for t in power_watchlist:
+for t in power_list:
     try:
         df = raw_data[t + ".NS"].dropna()
         if df.empty: continue
@@ -59,9 +58,9 @@ for t in power_watchlist:
         if cmp > df['Close'].iloc[-2]: bulls += 1
         else: bears += 1
         
-        # Tradex Power Logic
-        if cmp >= (h * 0.998) or cmp <= (l * 1.002):
-            prio = "MEDIUM" # Logic based on proximity
+        # Power Filter
+        if cmp >= (h * 0.9985) or cmp <= (l * 1.0015):
+            prio = "MEDIUM"
             sig, color = ("SIGNAL", "#2ecc71") if cmp > (h+l)/2 else ("SIGNAL", "#e74c3c")
             signals.append({"S": t, "SIG": sig, "L": f"ABOVE {h}" if cmp > (h+l)/2 else f"BELOW {l}", "P": prio, "C": color})
     except: continue
@@ -75,8 +74,13 @@ with col_left:
     fig.update_layout(showlegend=False, height=220, margin=dict(t=0,b=0,l=0,r=0), paper_bgcolor='rgba(0,0,0,0)')
     st.plotly_chart(fig, use_container_width=True)
     
-    # Portfolio Tracker Segment
-    st.markdown("<div class='portfolio-box'><h4>💼 Motilal Portfolio</h4><p style='font-size:13px;'>Live Equity Value Tracking...</p><h2 style='color:#2ecc71;'>₹ 1,45,200</h2><small>+2.4% Today</small></div>", unsafe_allow_html=True)
+    # Health Tip Box [cite: 2026-01-29]
+    st.markdown("""
+        <div class='health-box'>
+            <h4 style='color:#ffca28; margin-top:0;'>🧘‍♂️ Santosh Health Tip</h4>
+            <p style='font-size:14px;'>Bhai, <b>Almond Oil</b> lagana mat bhulna. Dandruff free scalp se focus badhta hai!</p>
+        </div>
+    """, unsafe_allow_html=True)
 
 with col_right:
     st.subheader("🔥 Tradex Power Signals") #
@@ -90,7 +94,7 @@ with col_right:
             r2.markdown(f"<span style='color:{s['C']}; font-weight:bold;'>{s['SIG']}</span>", unsafe_allow_html=True)
             r3.write(f"**{s['L']}**")
             r4.markdown(f"<span class='priority-medium'>{s['P']}</span>", unsafe_allow_html=True)
-    else: st.info("Scanning for Power Breakouts...")
+    else: st.info("Scanning... No breakouts right now.")
 
 time.sleep(60)
 st.rerun()
