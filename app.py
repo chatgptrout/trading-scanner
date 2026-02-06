@@ -1,47 +1,61 @@
 import streamlit as st
 import yfinance as yf
-import pandas_ta as ta
+import plotly.express as px
+import pandas as pd
 import time
 
-st.set_page_config(page_title="SANTOSH EQUITY PRO", layout="wide")
+st.set_page_config(page_title="SANTOSH HEATMAP PRO", layout="wide")
 
-# Clean Dark Theme
-st.markdown("""<style>.stApp { background-color: #010b14; color: white; }
-.card { background: #0d1b2a; padding: 20px; border-radius: 12px; border-left: 8px solid #00f2ff; margin-bottom: 15px; }</style>""", unsafe_allow_html=True)
+# Dark Theme
+st.markdown("<style>.stApp { background-color: #010b14; color: white; }</style>", unsafe_allow_html=True)
 
-# 1. INDEX WATCH (Nifty & Bank Nifty)
-st.markdown("## 📊 INDEX TREND")
-c1, c2 = st.columns(2)
-for sym, col in zip(["^NSEI", "^NSEBANK"], [c1, c2]):
-    try:
-        data = yf.Ticker(sym).fast_info
-        p = data['last_price']
-        chg = ((p - data['previous_close']) / data['previous_close']) * 100
-        name = "NIFTY 50" if sym == "^NSEI" else "BANK NIFTY"
-        col.markdown(f'<div class="card"><b>{name}</b><br><h2 style="margin:0;">₹{p:,.2f}</h2><p>{chg:+.2f}%</p></div>', unsafe_allow_html=True)
-    except: continue
+st.markdown("<h1 style='text-align:center; color:#ff4b2b;'>🟥 MARKET HEATMAP (DEEP RED STYLE)</h1>", unsafe_allow_html=True)
 
-# 2. STOCK SCANNER (Target & SL)
-st.markdown("## 🦅 LIVE STOCK SIGNALS")
-shikari_list = ["RELIANCE.NS", "SBIN.NS", "ZOMATO.NS", "TATAMOTORS.NS", "HAL.NS", "ADANIENT.NS"]
+# Stocks to track (Jaise Pharma list aapne bheji)
+watchlist = [
+    "SUNPHARMA.NS", "DIVISLAB.NS", "CIPLA.NS", "DRREDDY.NS", 
+    "LUPIN.NS", "TATASTEEL.NS", "RELIANCE.NS", "SBIN.NS",
+    "ZOMATO.NS", "ADANIENT.NS", "TCS.NS", "INFY.NS"
+]
 
-for sym in shikari_list:
-    try:
-        t = yf.Ticker(sym).fast_info
-        p = t['last_price']
-        c = ((p - t['previous_close']) / t['previous_close']) * 100
-        color = "#00ff88" if c > 0 else "#ff4b2b"
-        side = "LONG 🟢" if c > 0 else "SHORT 🔴"
-        
-        # Simple Target (1%) and SL (0.5%)
-        t1 = p * 1.01 if c > 0 else p * 0.99
-        sl = p * 0.995 if c > 0 else p * 1.005
+def get_heatmap_data():
+    data = []
+    for sym in watchlist:
+        try:
+            t = yf.Ticker(sym).fast_info
+            price = t['last_price']
+            change = ((price - t['previous_close']) / t['previous_close']) * 100
+            data.append({"Symbol": sym.replace(".NS", ""), "Price": price, "Change": change})
+        except: continue
+    return pd.DataFrame(data)
 
-        st.markdown(f"""<div class="card" style="border-left-color:{color}">
-            <h3 style="margin:0;">{side}: {sym} @ ₹{p:.2f} ({c:+.2f}%)</h3>
-            <p style="color:{color}; font-weight:bold;">Target: {t1:.2f} | Stop Loss: {sl:.2f}</p>
-        </div>""", unsafe_allow_html=True)
-    except: continue
+df = get_heatmap_data()
 
-time.sleep(15)
+if not df.empty:
+    # 1000104630.jpg jaisa Treemap logic
+    fig = px.treemap(
+        df, 
+        path=['Symbol'], 
+        values=[abs(x) for x in df['Change']], # Bada change = Bada box
+        color='Change',
+        color_continuous_scale=['#ff0000', '#ff4b2b', '#333333', '#00ff88'], # Red to Green
+        custom_data=['Price', 'Change']
+    )
+
+    fig.update_layout(
+        margin=dict(t=0, l=0, r=0, b=0),
+        height=600,
+        template="plotly_dark"
+    )
+    
+    fig.update_traces(
+        texttemplate="<br><b>%{label}</b><br>₹%{customdata[0]:.2f}<br>%{customdata[1]:.2f}%",
+        textfont_size=18
+    )
+
+    st.plotly_chart(fig, use_container_width=True)
+
+st.info("💡 Bada Box = Bada Movement | Deep Red = Heavy Selling")
+
+time.sleep(30)
 st.rerun()
