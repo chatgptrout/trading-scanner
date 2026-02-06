@@ -3,42 +3,58 @@ import yfinance as yf
 import pandas as pd
 import time
 
-st.set_page_config(page_title="SANTOSH SCALPER PRO", layout="wide")
+st.set_page_config(page_title="SANTOSH MULTI-MARKET PRO", layout="wide")
 
-# Neo-Style Dark Theme
+# Dark Theme Style
 st.markdown("""<style>.stApp { background-color: #010b14; color: white; }
-.gauge-box { border: 4px solid #ff4b2b; border-radius: 50%; width: 150px; height: 150px; line-height: 150px; text-align: center; margin: auto; font-size: 32px; font-weight: bold; color: #ff4b2b; }
-.signal-card { background: #0d1b2a; padding: 15px; border-radius: 12px; border-left: 10px solid #00ff88; margin-bottom: 10px; }</style>""", unsafe_allow_html=True)
+.sentiment-box { border: 5px solid #ff4b2b; border-radius: 50%; width: 140px; height: 140px; line-height: 140px; text-align: center; margin: auto; font-size: 28px; font-weight: bold; background: #0d1b2a; }
+.mcx-card { background: linear-gradient(135deg, #1e3a5f, #0d1b2a); padding: 15px; border-radius: 12px; border-top: 5px solid #ffcc00; margin-bottom: 10px; }</style>""", unsafe_allow_html=True)
 
-# 1. MARKET DISTRIBUTION (PCR GAUGE - image_1000104575.jpg)
-st.markdown("<h2 style='text-align:center;'>📊 MARKET DISTRIBUTION (PCR)</h2>", unsafe_allow_html=True)
-st.markdown('<div class="gauge-box">0.72</div>', unsafe_allow_html=True)
-st.markdown("<p style='text-align:center; color:#ff4b2b; font-weight:bold;'>BEARISH MODE 🐻</p>", unsafe_allow_html=True)
+# 1. MARKET SENTIMENT GAUGE (image_1000104586.jpg)
+st.markdown("<h2 style='text-align:center; color:#00f2ff;'>🧭 MARKET SENTIMENT (BULL VS BEAR)</h2>", unsafe_allow_html=True)
+col_a, col_b, col_c = st.columns([1,2,1])
+with col_b:
+    # Based on PCR 0.72 from your image
+    st.markdown('<div class="sentiment-box" style="color:#ff4b2b; border-color:#ff4b2b;">BEAR 🐻</div>', unsafe_allow_html=True)
+    st.markdown("<p style='text-align:center; font-size:20px; color:#ff4b2b;'>Sentiment: Highly Bearish</p>", unsafe_allow_html=True)
 
-# 2. X-FACTOR SCALPER (HIGH MOVEMENT - image_1000104573.jpg)
-st.markdown("### 🚀 X-FACTOR: TOP SCALPING SIGNALS")
-# Stocks like Syngene, Persistent from your screenshots
-shikari_list = ["SYNGENE.NS", "PERSISTENT.NS", "SBIN.NS", "RELIANCE.NS", "ADANIENT.NS"]
+# 2. MCX COMMODITY SPECIAL (Crude, Gold, Silver)
+st.markdown("<h2 style='color:#ffcc00;'>🔥 MCX LIVE COMMODITY SIGNALS</h2>", unsafe_allow_html=True)
+mcx_list = {
+    "CRUDE OIL": "CL=F", 
+    "GOLD": "GC=F", 
+    "SILVER": "SI=F"
+}
 
-for sym in shikari_list:
+c1, c2, c3 = st.columns(3)
+cols = [c1, c2, c3]
+
+for (name, sym), col in zip(mcx_list.items(), cols):
     try:
         t = yf.Ticker(sym)
         p = t.fast_info['last_price']
-        prev = t.fast_info['previous_close']
-        change = ((p - prev) / prev) * 100
+        change = ((p - t.fast_info['previous_close']) / t.fast_info['previous_close']) * 100
+        color = "#00ff88" if change > 0 else "#ff4b2b"
         
-        # Logic: High Volume/Movement tracking
-        color = "#ff4b2b" if change < 0 else "#00ff88"
-        status = "SELL 🔴" if change < 0 else "BUY 🟢"
-        
-        st.markdown(f"""
-            <div class="signal-card" style="border-left-color:{color};">
-                <h3 style="margin:0;">{status} | {sym} @ ₹{p:.2f}</h3>
-                <p style="color:{color}; font-size:20px;"><b>Change: {change:.2f}% | X-FACTOR: {abs(change)*2:.1f}x</b></p>
-                <p style="color:#00f2ff;">T1: {p*0.995:.2f} | T2: {p*0.99:.2f} | SL: {p*1.005:.2f}</p>
-            </div>
-        """, unsafe_allow_html=True)
+        with col:
+            st.markdown(f"""
+                <div class="mcx-card">
+                    <h3 style="margin:0; color:#ffcc00;">{name}</h3>
+                    <h2 style="margin:5px 0;">${p:.2f}</h2>
+                    <p style="color:{color}; font-size:18px; font-weight:bold;">{change:.2f}%</p>
+                    <p style="font-size:14px; color:#a0a0a0;">Target: {p*1.005:.2f} | SL: {p*0.997:.2f}</p>
+                </div>
+            """, unsafe_allow_html=True)
     except: continue
 
-time.sleep(10)
+# 3. EQUITY X-FACTOR RECAP (image_1000104573.jpg)
+st.markdown("<h2 style='color:#00f2ff;'>🦅 EQUITY DAY SUMMARY</h2>", unsafe_allow_html=True)
+equity_list = ["SYNGENE.NS", "PERSISTENT.NS", "RELIANCE.NS"]
+for s in equity_list:
+    try:
+        data = yf.Ticker(s).fast_info
+        st.write(f"✅ {s}: Last Price ₹{data['last_price']:.2f} | Day Change: {((data['last_price']-data['previous_close'])/data['previous_close'])*100:.2f}%")
+    except: continue
+
+time.sleep(15)
 st.rerun()
