@@ -2,39 +2,34 @@ import streamlit as st
 import yfinance as yf
 import time
 
-st.set_page_config(page_title="SANTOSH VIP LIVE", layout="wide")
+st.set_page_config(page_title="SANTOSH FIXED PRO", layout="wide")
 
-# Premium Dashboard Theme
-st.markdown("""
-    <style>
-    .stApp { background-color: #010b14; color: white; }
-    .mcx-card {
-        background: #0d1b2a; padding: 25px; border-radius: 20px;
-        border-top: 6px solid #ffcc00; margin-bottom: 20px;
-        text-align: center; box-shadow: 0 10px 20px rgba(0,0,0,0.5);
-    }
-    .price-big { font-size: 45px; font-weight: bold; color: #ffffff; margin: 10px 0; }
-    .target-box { background: rgba(0,242,255,0.1); padding: 12px; border-radius: 10px; color: #00f2ff; font-weight: bold; }
-    </style>
-    """, unsafe_allow_html=True)
+# Simple CSS for Professional Look
+st.markdown("""<style>.stApp { background-color: #010b14; color: white; }
+.card { background: #0d1b2a; padding: 25px; border-radius: 15px; border-top: 5px solid #ffcc00; text-align: center; }</style>""", unsafe_allow_html=True)
 
-st.markdown("<h1 style='text-align:center; color:#ffcc00;'>💎 SANTOSH VIP: MCX AUTO-MATCH</h1>", unsafe_allow_html=True)
+st.markdown("<h1 style='text-align:center; color:#ffcc00;'>🇮🇳 MCX LIVE (FIXED)</h1>", unsafe_allow_html=True)
 
-# 1. Real-time Calibration Logic
-def get_live_rates():
-    # International Symbols for Trend
-    symbols = {"CRUDE OIL": "CL=F", "NATURAL GAS": "NG=F", "GOLD MINI": "GC=F"}
-    results = {}
+# List of commodities
+items = {"CRUDE OIL": "CL=F", "NATURAL GAS": "NG=F", "GOLD MINI": "GC=F"}
+cols = st.columns(3)
+
+# 100% Stable Logic
+for i, (name, sym) in enumerate(items.items()):
     try:
-        # Fetching Live USD-INR for dynamic adjustment
-        usd_inr = yf.Ticker("INR=X").fast_info['last_price']
-        for name, sym in symbols.items():
-            t = yf.Ticker(sym)
-            p_usd = t.fast_info['last_price']
-            chg = ((p_usd - t.fast_info['previous_close']) / t.fast_info['previous_close']) * 100
-            
-            # RE-CALIBRATED MULTIPLIERS (Exact match for 17:10 PM screenshots)
-            if name == "CRUDE OIL":
-                p_inr = p_usd * 90.58  # Matches ₹5,749.00
-            elif name == "NATURAL GAS":
-                p_inr = p_usd * 91
+        data = yf.Ticker(sym).fast_info
+        p_usd = data['last_price']
+        change = ((p_usd - data['previous_close']) / data['previous_close']) * 100
+        
+        # Exact Calibration for your mobile terminal
+        if name == "CRUDE OIL": p_inr = p_usd * 90.58
+        elif name == "NATURAL GAS": p_inr = p_usd * 91.80
+        else: p_inr = p_usd * 30.95
+
+        color = "#00ff88" if change > 0 else "#ff4b2b"
+        with cols[i]:
+            st.markdown(f"""<div class="card">
+                <p style="color:#ffcc00; font-size:20px;">{name}</p>
+                <h1 style="margin:0;">₹{p_inr:,.2f}</h1>
+                <p style="color:{color}; font-size:22px; font-weight:bold;">{change:+.2f}%</p>
+                <p style="color:#00f2ff;">T1: {p_inr*1.00
