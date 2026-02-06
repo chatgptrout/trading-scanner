@@ -1,60 +1,93 @@
 import streamlit as st
 import yfinance as yf
+import plotly.express as px
 import plotly.graph_objects as go
 import pandas as pd
 import time
 
-st.set_page_config(page_title="SANTOSH CLICK-SCANNER", layout="wide")
+st.set_page_config(page_title="SANTOSH HEATMAP PRO", layout="wide")
 
-# Theme
-st.markdown("<style>.stApp { background-color: #010b14; color: white; }</style>", unsafe_allow_html=True)
+# Deep Red Theme Styling
+st.markdown("""
+    <style>
+    .stApp { background-color: #010b14; color: white; }
+    .reportview-container .main .block-container { padding-top: 1rem; }
+    </style>
+    """, unsafe_allow_html=True)
 
-# 1. SIDEBAR SELECTION (Click jaisa kaam karega)
-st.sidebar.header("🔍 SELECT STOCK TO ANALYZE")
-watchlist = ["RELIANCE.NS", "SBIN.NS", "SUNPHARMA.NS", "ZOMATO.NS", "TATAMOTORS.NS", "HAL.NS"]
-selected_stock = st.sidebar.selectbox("Click/Select a Stock:", watchlist)
+st.markdown("<h1 style='text-align:center; color:#ff4b2b;'>🟥 LIVE MARKET HEATMAP</h1>", unsafe_allow_html=True)
 
-st.markdown(f"<h1>📈 Analyzing: {selected_stock}</h1>", unsafe_allow_html=True)
+# 1. WATCHLIST (Jaise aapke screenshot mein tha)
+watchlist = [
+    "SUNPHARMA.NS", "DIVISLAB.NS", "CIPLA.NS", "DRREDDY.NS", 
+    "LUPIN.NS", "ALKEM.NS", "AUROPHARMA.NS", "RELIANCE.NS", 
+    "SBIN.NS", "TCS.NS", "INFY.NS", "ZOMATO.NS"
+]
 
-# 2. FETCH DATA
+# 2. FETCH DATA FOR HEATMAP
+def get_data():
+    rows = []
+    for sym in watchlist:
+        try:
+            t = yf.Ticker(sym).fast_info
+            p = t['last_price']
+            c = ((p - t['previous_close']) / t['previous_close']) * 100
+            rows.append({"Symbol": sym.replace(".NS",""), "FullSym": sym, "Price": p, "Change": c})
+        except: continue
+    return pd.DataFrame(rows)
+
+df = get_data()
+
+# 3. INTERACTIVE SELECTION (Click feature)
+selected_stock = st.selectbox("Click to Analyze Details:", df['FullSym'].tolist())
+
+# 4. THE "DEEP RED" HEATMAP (1000104630.jpg Style)
+if not df.empty:
+    fig = px.treemap(
+        df, path=['Symbol'], values=[abs(x)+1 for x in df['Change']],
+        color='Change',
+        color_continuous_scale=['#8B0000', '#FF0000', '#333333', '#006400', '#00FF00'],
+        custom_data=['Price', 'Change']
+    )
+    fig.update_layout(margin=dict(t=0, l=0, r=0, b=0), height=450, template="plotly_dark")
+    fig.update_traces(texttemplate="<b>%{label}</b><br>%{customdata[1]:+.2f}%")
+    st.plotly_chart(fig, use_container_width=True)
+
+# 5. CLICK DETAILS: CANDLESTICK & SIGNALS
+st.markdown(f"## 📊 {selected_stock} Deep Analysis")
 try:
-    ticker = yf.Ticker(selected_stock)
-    # 5-minute candles for detail view
-    df = ticker.history(period='1d', interval='5m')
-    info = ticker.fast_info
+    hist = yf.Ticker(selected_stock).history(period='1d', interval='5m')
     
-    if not df.empty:
-        # 3. LIVE CANDLESTICK CHART
-        fig = go.Figure(data=[go.Candlestick(
-            x=df.index, open=df['Open'], high=df['High'],
-            low=df['Low'], close=df['Close'],
+    col1, col2 = st.columns([2, 1])
+    
+    with col1:
+        # Candlestick Chart
+        chart = go.Figure(data=[go.Candlestick(
+            x=hist.index, open=hist['Open'], high=hist['High'],
+            low=hist['Low'], close=hist['Close'],
             increasing_line_color='#00ff88', decreasing_line_color='#ff4b2b'
         )])
-        fig.update_layout(template='plotly_dark', xaxis_rangeslider_visible=False, height=400, margin=dict(l=0,r=0,t=0,b=0))
-        st.plotly_chart(fig, use_container_width=True)
-
-        # 4. QUICK DETAILS CARD
-        c1, c2, c3 = st.columns(3)
-        change = ((info['last_price'] - info['previous_close']) / info['previous_close']) * 100
+        chart.update_layout(template='plotly_dark', xaxis_rangeslider_visible=False, height=400, margin=dict(l=0,r=0,t=0,b=0))
+        st.plotly_chart(chart, use_container_width=True)
         
-        with c1:
-            st.markdown(f"### Price: ₹{info['last_price']:.2f}")
-            st.markdown(f"**Change:** {change:+.2f}%")
-        with c2:
-            st.markdown(f"### High/Low")
-            st.markdown(f"H: ₹{info['day_high']:.2f} | L: ₹{info['day_low']:.2f}")
-        with c3:
-            # Simple RSI/Signal Logic
-            st.markdown("### SIGNAL")
-            signal = "STRONG BUY 🚀" if change > 1 else "WATCHING 👀" if abs(change) < 1 else "SELL 🔴"
-            st.subheader(signal)
-
+    with col2:
+        # Buy/Sell Signals
+        curr_p = df[df['FullSym']==selected_stock]['Price'].values[0]
+        curr_c = df[df['FullSym']==selected_stock]['Change'].values[0]
+        
+        st.markdown(f"### LTP: ₹{curr_p:.2f}")
+        st.markdown(f"### Change: {curr_c:+.2f}%")
+        
+        if curr_c < -1.5:
+            st.error("💥 DEEP RED: STRONG SELL")
+            st.write(f"Target: {curr_p*0.99:.2f} | SL: {curr_p*1.01:.2f}")
+        elif curr_c > 1.5:
+            st.success("🚀 BULL RUN: STRONG BUY")
+            st.write(f"Target: {curr_p*1.01:.2f} | SL: {curr_p*0.99:.2f}")
+        else:
+            st.info("⚖️ SIDEWAYS: WAIT")
 except:
-    st.error("Data loading... Please wait.")
+    st.write("Click on a stock to load details.")
 
-# Heatmap Summary (Niche dikhegi)
-st.markdown("---")
-st.caption("Tip: Use the sidebar to switch between stocks instantly for detailed analysis.")
-
-time.sleep(10)
+time.sleep(20)
 st.rerun()
