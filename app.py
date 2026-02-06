@@ -57,4 +57,26 @@ for sym in tickers:
     except: continue
 
 time.sleep(15)
-st.rerun()
+st.rerun()# --- NeoTrader Style Multi-Target Logic ---
+def get_neo_signal(sym):
+    t = yf.Ticker(sym)
+    p = t.fast_info['last_price']
+    c = ((p - t.fast_info['previous_close']) / t.fast_info['previous_close']) * 100
+    
+    # High Movement Filter (Neo Style)
+    if abs(c) > 0.8:
+        color = "#00ff88" if c > 0 else "#ff4b2b"
+        # 3 Targets like NeoTrader (T1=0.5%, T2=1%, T3=1.5%)
+        t1 = p * 1.005 if c > 0 else p * 0.995
+        t2 = p * 1.01 if c > 0 else p * 0.99
+        t3 = p * 1.015 if c > 0 else p * 0.985
+        sl = p * 0.994 if c > 0 else p * 1.006
+        
+        st.markdown(f"""
+            <div class="card" style="border-left:10px solid {color}">
+                <h3 style="margin:0;">🚀 {sym} @ ₹{p:.2f}</h3>
+                <p style="color:{color}; font-weight:bold;">T1: ₹{t1:.2f} | T2: ₹{t2:.2f} | T3: ₹{t3:.2f}</p>
+                <p style="color:white;">Stop Loss: ₹{sl:.2f}</p>
+            </div>
+        """, unsafe_allow_html=True)
+
