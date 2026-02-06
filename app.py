@@ -5,40 +5,83 @@ import plotly.graph_objects as go
 import time
 from datetime import datetime
 
-st.set_page_config(layout="wide", page_title="Santosh Pro Terminal")
+# Page Setup
+st.set_page_config(layout="wide", page_title="Santosh Master Terminal")
 
-# Professional Dark Style
+# Styling: High-Visibility Cards
 st.markdown("""
     <style>
     .stApp { background-color: #050505; color: white; }
-    .crude-card { background-color: #111; padding: 20px; border: 2px solid #ffca28; border-radius: 10px; text-align: center; margin-bottom: 20px; }
+    .signal-card { 
+        padding: 15px; border-radius: 8px; border: 1px solid #444; 
+        text-align: center; margin-bottom: 10px; background-color: #111;
+    }
     th { background-color: #1a1a1a !important; color: #ffca28 !important; }
-    td { border: 0.5px solid #333 !important; }
+    td { border: 0.1px solid #333 !important; }
     </style>
     """, unsafe_allow_html=True)
 
-# 1. CRUDE OIL SIGNAL LOGIC
-def get_crude_data():
-    try:
-        crude = yf.Ticker("CL=F")
-        df = crude.history(period="1d", interval="5m")
-        if not df.empty:
-            cmp = round(df['Close'].iloc[-1], 2)
-            low = round(df['Low'].min(), 2)
-            high = round(df['High'].max(), 2)
-            if cmp < low * 1.005: return cmp, "BEARISH", f"BELOW {low}", "#e74c3c"
-            if cmp > high * 0.995: return cmp, "BULLISH", f"ABOVE {high}", "#2ecc71"
-            return cmp, "NEUTRAL", "WAIT", "#ffca28"
-    except: return None, "OFFLINE", "-", "#555"
-    return None, None, None, None
+# 1. DATA FETCHING LOGIC (Indices + Commodities)
+def get_market_signals():
+    # Yahoo Finance Tickers for Nifty, Sensex, Crude, NG, Gold, Silver
+    tickers = {
+        "NIFTY 50": "^NSEI", 
+        "SENSEX": "^BSESN", 
+        "CRUDE OIL": "CL=F", 
+        "NAT GAS": "NG=F", 
+        "GOLD": "GC=F", 
+        "SILVER": "SI=F"
+    }
+    
+    signals = []
+    for name, sym in tickers.items():
+        try:
+            data = yf.Ticker(sym).history(period="1d", interval="5m")
+            if not data.empty:
+                cmp = round(data['Close'].iloc[-1], 2)
+                open_p = data['Open'].iloc[0]
+                high = data['High'].max()
+                low = data['Low'].min()
+                
+                # Tradex Style Logic: CMP vs High/Low
+                if cmp > (high * 0.998): 
+                    status, color = "BULLISH", "#2ecc71"
+                elif cmp < (low * 1.002): 
+                    status, color = "BEARISH", "#e74c3c"
+                else: 
+                    status, color = "SIDEWAYS", "#ffca28"
+                
+                signals.append({"name": name, "cmp": cmp, "status": status, "color": color})
+        except: continue
+    return signals
 
-# 2. NIFTY 50 DATA LOGIC
-nifty50_list = ["RELIANCE", "TCS", "HDFCBANK", "SBIN", "ICICIBANK", "TATAMOTORS", "INFY", "AXISBANK", "DLF", "GNFC"] # Add more as needed
+# --- UI EXECUTION ---
+st.title("📟 Santosh Master Command Center")
+st.write(f"Live Market Feed | Last Update: {datetime.now().strftime('%H:%M:%S')}")
+
+# A. TOP SECTION: SIGNAL CARDS (Nifty, Sensex, Commodities)
+signals = get_market_signals()
+if signals:
+    cols = st.columns(len(signals))
+    for i, sig in enumerate(signals):
+        with cols[i]:
+            st.markdown(f"""
+                <div class='signal-card'>
+                    <small>{sig['name']}</small>
+                    <h3 style='color:{sig['color']}; margin:5px 0;'>{sig['status']}</h3>
+                    <p style='margin:0; font-size:18px;'>{sig['cmp']}</p>
+                </div>
+            """, unsafe_allow_html=True)
+
+# B. MIDDLE SECTION: MARKET BREADTH (IntradayPulse Style)
+st.markdown("---")
+# (Nifty 50 Table Logic remains as before)
+nifty_list = ["RELIANCE", "TCS", "HDFCBANK", "SBIN", "ICICIBANK", "TATAMOTORS", "INFY", "DLF", "GNFC"]
 
 def get_table_data():
     rows = []
-    data = yf.download([t + ".NS" for t in nifty50_list], period="2d", group_by='ticker', progress=False)
-    for t in nifty50_list:
+    data = yf.download([t + ".NS" for t in nifty_list], period="2d", group_by='ticker', progress=False)
+    for t in nifty_list:
         try:
             df = data[t + ".NS"]
             cmp = round(df['Close'].iloc[-1], 2)
@@ -46,40 +89,33 @@ def get_table_data():
             action = "BUY EXIT" if cmp > open_p else "SELL EXIT"
             trend = "Positive" if cmp > df['Close'].iloc[-2] else "Negative"
             rows.append({
-                "Action": action, "Symbol": t, "Entry": round(open_p, 2), "CMP": cmp,
+                "Action": action, "Symbol": t, "Entry Price": round(open_p, 2), "CMP": cmp,
                 "Target": round(cmp * 1.015, 2) if action == "BUY EXIT" else round(cmp * 0.985, 2),
-                "Trend": trend, "Valuation": "Attractive" if trend == "Positive" else "Fair"
+                "Financial Trend": trend, "Valuation": "Attractive" if trend == "Positive" else "Fair"
             })
         except: continue
     return pd.DataFrame(rows)
 
-# --- DISPLAY ---
-st.title("📟 Santosh Multi-Scanner Terminal")
-
-# A. Crude Section (Upar)
-c_cmp, c_sig, c_lvl, c_col = get_crude_data()
-if c_cmp:
-    st.markdown(f"<div class='crude-card'><h2 style='margin:0;'>CRUDE OIL FUT</h2><h1 style='color:{c_col};'>{c_sig} {c_lvl}</h1><p>Price: {c_cmp}</p></div>", unsafe_allow_html=True)
-
-# B. Market Breadth & Table (Niche)
-df_final = get_table_data()
-if not df_final.empty:
-    col_chart, col_extra = st.columns([1, 2])
+df_table = get_table_data()
+if not df_table.empty:
+    col_chart, col_spacer = st.columns([1, 2])
     with col_chart:
-        pos = len(df_final[df_final['Trend'] == 'Positive'])
-        neg = len(df_final[df_final['Trend'] == 'Negative'])
+        pos = len(df_table[df_table['Financial Trend'] == 'Positive'])
+        neg = len(df_table[df_table['Financial Trend'] == 'Negative'])
         fig = go.Figure(data=[go.Pie(labels=['Bulls', 'Bears'], values=[pos, neg], hole=.7, marker_colors=['#2ecc71', '#e74c3c'])])
-        fig.update_layout(showlegend=False, height=250, margin=dict(t=0,b=0,l=0,r=0), paper_bgcolor='rgba(0,0,0,0)')
+        fig.update_layout(showlegend=False, height=220, margin=dict(t=0,b=0,l=0,r=0), paper_bgcolor='rgba(0,0,0,0)')
         st.plotly_chart(fig, use_container_width=True)
-    
-    st.subheader("📊 Trade Guide (Motilal Style)")
-    def style_table(val):
+
+    # C. BOTTOM SECTION: MOTILAL TRADE GUIDE TABLE
+    st.subheader("📊 Trade Guide (Equity Signals)")
+    def style_rows(val):
         if val == 'BUY EXIT': return 'background-color: #1b5e20; color: white;'
         if val == 'SELL EXIT': return 'background-color: #b71c1c; color: white;'
         return ''
     
-    st.table(df_final.style.map(style_table, subset=['Action']))
+    # Error Fix: Use .map instead of .applymap
+    st.table(df_table.style.map(style_rows, subset=['Action']))
 
-# AUTO REFRESH
+# 4. AUTO REFRESH (Every 60 Seconds)
 time.sleep(60)
 st.rerun()
