@@ -1,92 +1,103 @@
 import streamlit as st
 import yfinance as yf
 import pandas as pd
+import plotly.graph_objects as go
 import time
 from datetime import datetime
 
-# Page Configuration
-st.set_page_config(layout="wide", page_title="Santosh Auto-Scanner")
+st.set_page_config(layout="wide", page_title="Santosh Pro Hybrid")
 
-# Professional Dark Theme
+# Custom CSS for Dark UI
 st.markdown("""
     <style>
-    .stApp { background-color: #050505; color: #ffffff; }
-    th { background-color: #222 !important; color: #ffca28 !important; font-size: 16px; border: 1px solid #444 !important; }
-    td { font-size: 15px; border: 1px solid #333 !important; padding: 10px !important; }
-    .status-box { padding: 10px; border-radius: 5px; background-color: #1a1a1a; border-left: 5px solid #ffca28; }
+    .stApp { background-color: #050505; color: white; }
+    th { background-color: #222 !important; color: #ffca28 !important; }
     </style>
     """, unsafe_allow_html=True)
 
-# --- Header with Auto-Refresh Info ---
-col_t1, col_t2 = st.columns([3, 1])
-with col_t1:
-    st.title("📟 Santosh Live Auto-Scanner")
-with col_t2:
-    last_update = datetime.now().strftime("%H:%M:%S")
-    st.markdown(f"<div class='status-box'><b>Last Update:</b> {last_update}<br>Next refresh in 60s</div>", unsafe_allow_html=True)
+# --- 1. Top Section: IntradayPulse Style Chart ---
+def draw_circular_chart(data):
+    # Mapping colors for the donut chart
+    colors = ['#2ecc71' if x == 'Positive' else '#e74c3c' for x in data['Financial Trend']]
+    
+    fig = go.Figure(data=[go.Pie(
+        labels=data['Symbol'], 
+        values=[1]*len(data),
+        hole=.7,
+        marker_colors=colors,
+        textinfo='label',
+        hoverinfo='label+percent'
+    )])
+    
+    fig.update_layout(
+        showlegend=False,
+        margin=dict(t=0, b=0, l=0, r=0),
+        height=350,
+        paper_bgcolor='rgba(0,0,0,0)',
+        plot_bgcolor='rgba(0,0,0,0)',
+        annotations=[dict(text='MARKET<br>BREADTH', x=0.5, y=0.5, font_size=20, showarrow=False)]
+    )
+    return fig
 
-# --- NSE Stock List (Top Traded) ---
-nse_list = [
-    "RELIANCE", "TCS", "HDFCBANK", "ICICIBANK", "INFY", "AXISBANK", "SBIN", "BHARTIARTL", 
-    "LICI", "ITC", "HINDUNILVR", "LT", "BAJFINANCE", "TATAMOTORS", "SUNPHARMA", "MARUTI", 
-    "ADANIENT", "KOTAKBANK", "TITAN", "ONGC", "TATASTEEL", "NTPC", "ASIANPAINT", "HAL", 
-    "COALINDIA", "BAJAJFINSV", "ADANIPORTS", "JSWSTEEL", "HCLTECH", "M&M", "DRREDDY", 
-    "ADANIPOWER", "CIPLA", "BEL", "ZOMATO", "DLF", "GAIL", "WIPRO", "GNFC", "INTELLECT"
-]
+# --- 2. Data Fetching Logic ---
+nse_list = ["RELIANCE", "TCS", "HDFCBANK", "SBIN", "TATAMOTORS", "INFY", "ICICIBANK", "DLF", "GNFC", "HAL"]
 
-# User selection saved in session state
-if 'selected_stocks' not in st.session_state:
-    st.session_state.selected_stocks = ["RELIANCE", "SBIN", "TATAMOTORS", "DLF", "GNFC"]
-
-selected_names = st.multiselect("Stocks add/remove karein:", options=sorted(nse_list), default=st.session_state.selected_stocks)
-st.session_state.selected_stocks = selected_names
-
-def fetch_data(names):
+def get_live_data(names):
     rows = []
-    tickers = [n + ".NS" for n in names]
-    for t in tickers:
+    for t in names:
         try:
-            s = yf.Ticker(t)
-            df = s.history(period="2d")
+            stock = yf.Ticker(t + ".NS")
+            df = stock.history(period="2d")
             if df.empty: continue
-            
             cmp = round(df['Close'].iloc[-1], 2)
-            open_p = round(df['Open'].iloc[-1], 2)
-            high = round(df['High'].iloc[-1], 2)
-            low = round(df['Low'].iloc[-1], 2)
+            open_p = df['Open'].iloc[-1]
+            prev_close = df['Close'].iloc[-2]
             
             action = "BUY EXIT" if cmp > open_p else "SELL EXIT"
-            trend = "Positive" if cmp > df['Close'].iloc[-2] else "Negative"
+            trend = "Positive" if cmp > prev_close else "Negative"
             
             rows.append({
                 "Action": action,
-                "Name": t.replace(".NS", ""),
-                "Entry Price": open_p,
-                "Stop Loss": round(low * 0.998, 2) if action == "BUY EXIT" else round(high * 1.002, 2),
+                "Symbol": t,
+                "Entry": round(open_p, 2),
                 "CMP": cmp,
                 "Target": round(cmp * 1.015, 2) if action == "BUY EXIT" else round(cmp * 0.985, 2),
                 "Financial Trend": trend,
-                "Valuation": "Attractive" if trend == "Positive" else "Fair",
-                "Segment": "Cash & Fut"
+                "Valuation": "Attractive" if trend == "Positive" else "Fair"
             })
         except: continue
     return pd.DataFrame(rows)
 
-# Main Table Display
-if st.session_state.selected_stocks:
-    data = fetch_data(st.session_state.selected_stocks)
-    if not data.empty:
-        def style_rows(val):
-            if val == 'BUY EXIT': return 'background-color: #1b5e20; color: white;'
-            if val == 'SELL EXIT': return 'background-color: #b71c1c; color: white;'
-            if val == 'Positive': return 'color: #2ecc71; font-weight: bold'
-            if val == 'Negative': return 'color: #e74c3c; font-weight: bold'
-            return ''
+# --- 3. UI Layout ---
+st.title("📟 Santosh Hybrid Terminal")
+current_time = datetime.now().strftime("%H:%M:%S")
+st.write(f"Auto-refreshing... Last update: {current_time}")
 
-        st.table(data.style.map(style_rows, subset=['Action', 'Financial Trend']))
+df_final = get_live_data(nse_list)
+
+if not df_final.empty:
+    col1, col2 = st.columns([1, 2])
     
-    # --- AUTO REFRESH LOGIC ---
-    time.sleep(60) # 60 seconds wait karega
-    st.rerun()    # Fir apne aap refresh kar dega
-else:
-    st.warning("Please select at least one stock.")
+    with col1:
+        st.subheader("Index Mover Trend")
+        st.plotly_chart(draw_circular_chart(df_final), use_container_width=True)
+    
+    with col2:
+        st.subheader("Top Contributors")
+        # List of top gainers/losers logic
+        st.dataframe(df_final[['Symbol', 'CMP', 'Financial Trend']].sort_values(by='CMP', ascending=False), height=300)
+
+    st.markdown("---")
+    st.subheader("📊 Intraday Trade Guide (Motilal Style)")
+    
+    # Styling for the main table
+    def style_final(val):
+        if val == 'BUY EXIT': return 'background-color: #1b5e20; color: white;'
+        if val == 'SELL EXIT': return 'background-color: #b71c1c; color: white;'
+        return ''
+
+    st.table(df_final.style.map(style_final, subset=['Action']))
+
+# Auto Refresh logic
+time.sleep(60)
+st.rerun()
