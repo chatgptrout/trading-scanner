@@ -2,54 +2,94 @@ import streamlit as st
 import yfinance as yf
 import pandas as pd
 
-# Page Configuration
+# Page setup - Pura screen use karne ke liye
 st.set_page_config(layout="wide", page_title="Santosh Stock Scanner")
 
-st.title("🚀 Real-Time Intraday Scanner")
-st.write("Data Source: Yahoo Finance (Delayed by ~1 min)")
-
-# List of Stocks (Aap yahan apne stocks add kar sakte hain)
-tickers = ["RELIANCE.NS", "TCS.NS", "HDFCBANK.NS", "ICICIBANK.NS", "AXISBANK.NS", "SBIN.NS", "INFY.NS"]
-
-def get_live_data(stocks):
-    data_list = []
-    for ticker in stocks:
-        stock = yf.Ticker(ticker)
-        df = stock.history(period="1d")
-        
-        if not df.empty:
-            cmp = round(df['Close'].iloc[-1], 2)
-            high = df['High'].iloc[-1]
-            low = df['Low'].iloc[-1]
-            
-            # Simple Logic for Entry/SL/Target (Aap ise change kar sakte hain)
-            entry = round(cmp, 2)
-            stop_loss = round(cmp * 0.99, 2) # 1% SL
-            target = round(cmp * 1.02, 2)    # 2% Target
-            
-            data_list.append({
-                "Symbol": ticker.replace(".NS", ""),
-                "Action": "BUY" if cmp > df['Open'].iloc[-1] else "SELL",
-                "CMP": cmp,
-                "Entry Price": entry,
-                "Stop Loss": stop_loss,
-                "Target": target,
-                "Financial Trend": "Positive" if cmp > df['Open'].iloc[-1] else "Negative"
-            })
-    return pd.DataFrame(data_list)
-
-# Refresh Button
-if st.button('Refresh Data'):
-    df_final = get_live_data(tickers)
-    # Displaying Table without Charts
-    st.table(df_final)
-else:
-    df_final = get_live_data(tickers)
-    st.table(df_final)
-
-# Formatting
+# Styling: Table ko black aur professional look dene ke liye
 st.markdown("""
-<style>
-    .stTable { font-size: 20px !important; }
-</style>
-""", unsafe_allow_html=True)
+    <style>
+    .main { background-color: #1e1e1e; }
+    div.stButton > button:first-child { background-color: #ffca28; color: black; font-weight: bold; }
+    .css-12w0qpk { border: 1px solid #444; }
+    thead tr th { background-color: #333 !important; color: #ffca28 !important; }
+    </style>
+    """, unsafe_allow_html=True)
+
+st.title("📟 Pro-Trader Intraday Scanner")
+
+# Stocks List (Aap yahan tickers badal sakte hain)
+tickers = [
+    "GNFC.NS", "INTELLECT.NS", "DRREDDY.NS", "ALKEM.NS", "AXISBANK.NS", 
+    "M&M.NS", "BALRAMCHIN.NS", "COALINDIA.NS", "ICICIBANK.NS", "HAL.NS"
+]
+
+def fetch_scanner_data(stocks):
+    rows = []
+    for t in stocks:
+        try:
+            s = yf.Ticker(t)
+            hist = s.history(period="2d")
+            if len(hist) < 2: continue
+            
+            prev_close = hist['Close'].iloc[-2]
+            cmp = round(hist['Close'].iloc[-1], 2)
+            open_p = hist['Open'].iloc[-1]
+            high = hist['High'].iloc[-1]
+            low = hist['Low'].iloc[-1]
+
+            # Image ke hisaab se Logic
+            action = "BUY" if cmp > open_p else "SELL"
+            trend = "Positive" if cmp > prev_close else "Negative"
+            
+            # Entry, SL, Target Calculations
+            entry = open_p
+            if action == "BUY":
+                sl = round(low * 0.998, 2)
+                target = round(cmp * 1.015, 2)
+                valuation = "Attractive" if cmp < (high * 0.99) else "Fair"
+            else:
+                sl = round(high * 1.002, 2)
+                target = round(cmp * 0.985, 2)
+                valuation = "Expensive"
+
+            rows.append({
+                "Action": action,
+                "Symbol": t.replace(".NS", ""),
+                "Entry Price": entry,
+                "Stop Loss": sl,
+                "CMP": cmp,
+                "Target": target,
+                "Financial Trend": trend,
+                "Valuation": valuation,
+                "Segment": "Cash & Fut"
+            })
+        except:
+            continue
+    return pd.DataFrame(rows)
+
+# Action Buttons
+col1, col2 = st.columns([1, 8])
+with col1:
+    refresh = st.button("🔄 REFRESH")
+
+# Display Table
+data = fetch_scanner_data(tickers)
+
+if not data.empty:
+    # Color coding logic for the table
+    def color_action(val):
+        color = '#2ecc71' if val == 'BUY' else '#e74c3c'
+        return f'background-color: {color}; color: white; font-weight: bold'
+
+    def color_trend(val):
+        color = '#2ecc71' if val == 'Positive' else '#e74c3c'
+        return f'color: {color}; font-weight: bold'
+
+    styled_df = data.style.applymap(color_action, subset=['Action']) \
+                          .applymap(color_trend, subset=['Financial Trend'])
+
+    st.table(styled_df)
+else:
+    st.error("Data fetch nahi ho raha. Check Internet.")
+
+st.info("Note: Yahoo Finance data is slightly delayed. For zero-delay, Dhan API is recommended.")
