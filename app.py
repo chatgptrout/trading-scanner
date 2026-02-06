@@ -5,108 +5,105 @@ import plotly.graph_objects as go
 import time
 from datetime import datetime
 
-# 1. Page Configuration
-st.set_page_config(layout="wide", page_title="Santosh BankNifty Master")
+# 1. Page Config
+st.set_page_config(layout="wide", page_title="Santosh Signal Pro")
 
 # Professional UI Styling
 st.markdown("""
     <style>
     .stApp { background-color: #050505; color: white; }
     .signal-card { 
-        padding: 12px; border-radius: 8px; border: 1px solid #333; 
+        padding: 15px; border-radius: 8px; border: 1px solid #333; 
         text-align: center; margin-bottom: 10px; background-color: #111;
     }
     th { background-color: #1a1a1a !important; color: #ffca28 !important; }
-    td { border: 0.1px solid #333 !important; }
+    td { border: 0.1px solid #333 !important; padding: 10px !important; }
     </style>
     """, unsafe_allow_html=True)
 
-# 2. Top Bar Logic (Indices & Commodities)
-def get_master_signals():
-    # Adding Bank Nifty Index to Top Bar
+# 2. Logic for Top Bar (Indices & Commodities)
+def get_master_levels():
     tickers = {
-        "NIFTY 50": "^NSEI", "BANK NIFTY": "^NSEBANK", 
-        "CRUDE OIL": "CL=F", "NAT GAS": "NG=F", 
-        "GOLD": "GC=F", "SILVER": "SI=F"
+        "NIFTY 50": "^NSEI", "BANK NIFTY": "^NSEBANK", "SENSEX": "^BSESN",
+        "CRUDE OIL": "CL=F", "NAT GAS": "NG=F", "GOLD": "GC=F", "SILVER": "SI=F"
     }
     results = []
     for name, sym in tickers.items():
         try:
-            data = yf.Ticker(sym).history(period="2d", interval="5m")
+            data = yf.Ticker(sym).history(period="1d", interval="5m")
             if not data.empty:
-                cmp = round(data['Close'].iloc[-1], 2)
-                high, low = data['High'].max(), data['Low'].min()
-                prev_close = data['Close'].iloc[-2]
+                high, low = round(data['High'].max(), 2), round(data['Low'].min(), 2)
+                cmp = data['Close'].iloc[-1]
                 
-                if name == "NAT GAS":
-                    if cmp > (high * 0.995): status, color = "🚀 BREAKOUT", "#00ff00"
-                    elif cmp < (low * 1.005): status, color = "⚠️ CRASHING", "#ff0000"
-                    else: status, color = "SIDEWAYS", "#ffca28"
+                # Tradex Style: CMP decide karega signal kya hoga
+                if cmp > (high + low)/2:
+                    status, level, color = "BULLISH", f"ABOVE {high}", "#2ecc71"
                 else:
-                    status, color = ("BULLISH", "#2ecc71") if cmp > prev_close else ("BEARISH", "#e74c3c")
-                results.append({"name": name, "cmp": cmp, "status": status, "color": color})
+                    status, level, color = "BEARISH", f"BELOW {low}", "#e74c3c"
+                
+                results.append({"name": name, "status": status, "level": level, "color": color})
         except: continue
     return results
 
-# 3. STOCK LIST (Priority: Bank Nifty + Nifty 50)
-master_list = [
-    "HDFCBANK", "ICICIBANK", "SBIN", "AXISBANK", "KOTAKBANK", "INDUSINDBK", 
-    "PNB", "BANKBARODA", "AUBANK", "FEDERALBNK", "IDFCFIRSTB", "BANDHANBNK",
-    "RELIANCE", "TCS", "TATAMOTORS", "INFY", "DLF", "GNFC", "HAL", "LT"
+# 3. Stock List (Nifty 50 + Bank Nifty Heavyweights)
+stock_list = [
+    "RELIANCE", "TCS", "HDFCBANK", "ICICIBANK", "SBIN", "INFY", "TATAMOTORS", "AXISBANK", 
+    "KOTAKBANK", "LT", "DLF", "GNFC", "HAL", "M&M", "BHARTIARTL", "ITC"
 ]
 
-def get_table_data():
+def get_stock_levels():
     rows = []
-    data = yf.download([t + ".NS" for t in master_list], period="2d", group_by='ticker', progress=False)
-    for t in master_list:
+    data = yf.download([t + ".NS" for t in stock_list], period="1d", interval="5m", group_by='ticker', progress=False)
+    for t in stock_list:
         try:
             df = data[t + ".NS"]
             if df.empty: continue
-            cmp, open_p = round(df['Close'].iloc[-1], 2), df['Open'].iloc[-1]
-            action = "BUY EXIT" if cmp > open_p else "SELL EXIT"
-            trend = "Positive" if cmp > df['Close'].iloc[-2] else "Negative"
-            rows.append({
-                "Action": action, "Symbol": t, "Entry": round(open_p, 2), "CMP": cmp,
-                "Target": round(cmp * 1.015, 2) if action == "BUY EXIT" else round(cmp * 0.985, 2),
-                "Trend": trend, "Valuation": "Attractive" if trend == "Positive" else "Fair"
-            })
+            high, low = round(df['High'].max(), 2), round(df['Low'].min(), 2)
+            cmp = df['Close'].iloc[-1]
+            
+            # Level Logic
+            if cmp > (high + low)/2:
+                signal, level, color = "BULLISH", f"ABOVE {high}", "color: #2ecc71; font-weight: bold;"
+            else:
+                signal, level, color = "BEARISH", f"BELOW {low}", "color: #e74c3c; font-weight: bold;"
+            
+            rows.append({"Symbol": t, "CMP": round(cmp, 2), "Signal": signal, "Level": level, "Style": color})
         except: continue
     return pd.DataFrame(rows)
 
 # --- DISPLAY ---
-st.title("📟 Santosh Bank Nifty & Equity Terminal")
-st.write(f"Live Market Data | Last Update: {datetime.now().strftime('%H:%M:%S')}")
+st.title("📟 Santosh Pro Master Signal Terminal")
+st.write(f"Live Action Levels | Last Update: {datetime.now().strftime('%H:%M:%S')}")
 
-# A. TOP SIGNALS
-sigs = get_master_signals()
+# A. TOP SIGNALS (Indices & Commodities)
+sigs = get_master_levels()
 if sigs:
-    cols = st.columns(6)
+    cols = st.columns(len(sigs))
     for i, s in enumerate(sigs):
         with cols[i]:
-            st.markdown(f"<div class='signal-card'><small>{s['name']}</small><h3 style='color:{s['color']}; margin:5px 0;'>{s['status']}</h3><b>{s['cmp']}</b></div>", unsafe_allow_html=True)
+            st.markdown(f"""
+                <div class='signal-card'>
+                    <small>{s['name']}</small>
+                    <h3 style='color:{s['color']}; margin:5px 0;'>{s['status']}</h3>
+                    <p style='margin:0; font-size:16px;'>{s['level']}</p>
+                </div>
+            """, unsafe_allow_html=True)
 
 st.markdown("---")
 
-# B. BREADTH & TRADE GUIDE
-df = get_table_data()
-if not df.empty:
-    c1, c2 = st.columns([1, 2.5])
-    with c1:
-        st.subheader("Market Breadth")
-        pos, neg = len(df[df['Trend'] == 'Positive']), len(df[df['Trend'] == 'Negative'])
-        fig = go.Figure(data=[go.Pie(labels=['Bulls', 'Bears'], values=[pos, neg], hole=.7, marker_colors=['#2ecc71', '#e74c3c'])])
-        fig.update_layout(showlegend=False, height=250, margin=dict(t=0,b=0,l=0,r=0), paper_bgcolor='rgba(0,0,0,0)')
-        st.plotly_chart(fig, use_container_width=True)
+# B. STOCK SIGNALS TABLE
+df_stocks = get_stock_levels()
+if not df_stocks.empty:
+    st.subheader("📊 Equity & Bank Nifty Trade Signals")
     
-    with c2:
-        st.subheader("📊 Motilal Trade Guide (Bank Nifty Priority)")
-        def style_rows(val):
-            if val == 'BUY EXIT': return 'background-color: #1b5e20; color: white;'
-            if val == 'SELL EXIT': return 'background-color: #b71c1c; color: white;'
-            return ''
-        # ERROR FIX: Using .map for cleaner UI
-        st.table(df.style.map(style_rows, subset=['Action']))
+    # Custom styling for the table rows
+    def apply_signal_color(row):
+        return [row['Style']] * len(row)
 
-# 4. AUTO REFRESH (Every 60s)
+    # Display clean table with only levels
+    display_df = df_stocks[['Symbol', 'CMP', 'Signal', 'Level']]
+    st.table(display_df.style.apply(lambda x: [x.Style]*4 if x.Signal == 'BULLISH' else [x.Style]*4, axis=1))
+
+# 4. AUTO REFRESH
 time.sleep(60)
 st.rerun()
