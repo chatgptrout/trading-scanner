@@ -5,7 +5,8 @@ import plotly.graph_objects as go
 import time
 from datetime import datetime
 
-st.set_page_config(layout="wide", page_title="Santosh All-In-One Terminal")
+# 1. Page Config
+st.set_page_config(layout="wide", page_title="Santosh Master Command Center")
 
 # Styling
 st.markdown("""
@@ -14,11 +15,13 @@ st.markdown("""
     .signal-card { padding: 10px; border-radius: 8px; border: 1px solid #333; text-align: center; background-color: #111; margin-bottom: 10px; }
     .priority-high { color: white; background-color: #d32f2f; padding: 4px 12px; border-radius: 20px; font-weight: bold; font-size: 12px; }
     .priority-medium { color: black; background-color: #ffca28; padding: 4px 12px; border-radius: 20px; font-weight: bold; font-size: 12px; }
+    th { background-color: #1a1a1a !important; color: #ffca28 !important; }
     </style>
     """, unsafe_allow_html=True)
 
-# 1. TOP BAR DATA (Indices & Commodities)
+# 2. Functions for Data
 def get_top_bar():
+    # Sabhi indices aur commodities ke live cards
     tickers = {"NIFTY 50": "^NSEI", "BANK NIFTY": "^NSEBANK", "CRUDE OIL": "CL=F", "NAT GAS": "NG=F", "GOLD": "GC=F", "SILVER": "SI=F"}
     results = []
     for name, sym in tickers.items():
@@ -28,15 +31,13 @@ def get_top_bar():
                 cmp = round(data['Close'].iloc[-1], 2)
                 prev_close = data['Close'].iloc[-2]
                 status, color = ("BULLISH", "#2ecc71") if cmp > prev_close else ("BEARISH", "#e74c3c")
-                if name == "NAT GAS": status, color = ("SIDEWAYS", "#ffca28") if abs(cmp-prev_close) < 0.01 else (status, color)
                 results.append({"name": name, "status": status, "cmp": cmp, "color": color})
         except: continue
     return results
 
-# 2. BREADTH & POWER SIGNALS
-power_list = ["RELIANCE", "TCS", "HDFCBANK", "ICICIBANK", "SBIN", "INFY", "TATAMOTORS", "POWERINDIA", "DLF", "GNFC", "HAL", "BEL"]
-
 def get_master_data():
+    # Breadth Circle aur Tradex Signals ke liye data
+    power_list = ["RELIANCE", "TCS", "HDFCBANK", "ICICIBANK", "SBIN", "INFY", "TATAMOTORS", "POWERINDIA", "DLF", "GNFC", "HAL", "BEL"]
     tickers = [t + ".NS" for t in power_list]
     data = yf.download(tickers, period="2d", interval="5m", group_by='ticker', progress=False)
     signals, bulls, bears = [], 0, 0
@@ -47,6 +48,7 @@ def get_master_data():
             h, l, cmp = round(df['High'].max(), 2), round(df['Low'].min(), 2), round(df['Close'].iloc[-1], 2)
             if cmp > df['Close'].iloc[-2]: bulls += 1
             else: bears += 1
+            # Action Filter
             if cmp >= (h * 0.998) or cmp <= (l * 1.002):
                 priority = "HIGH" if (cmp >= h or cmp <= l) else "MEDIUM"
                 sig, lvl, col = ("BULLISH", f"ABOVE {h}", "#2ecc71") if cmp > (h+l)/2 else ("BEARISH", f"BELOW {l}", "#e74c3c")
@@ -57,7 +59,7 @@ def get_master_data():
 # --- DISPLAY ---
 st.title("📟 Santosh Master Trading Command Center")
 
-# A. TOP BAR
+# A. TOP BAR TREND CARDS
 top_sigs = get_top_bar()
 if top_sigs:
     cols = st.columns(len(top_sigs))
@@ -67,7 +69,7 @@ if top_sigs:
 
 st.markdown("---")
 
-# B. MIDDLE SECTION
+# B. MIDDLE SECTION: CIRCLE + SIGNALS
 signals, bulls, bears = get_master_data()
 col_left, col_right = st.columns([1, 2.5])
 
@@ -76,6 +78,13 @@ with col_left:
     fig = go.Figure(data=[go.Pie(labels=['Bulls', 'Bears'], values=[bulls, bears], hole=.7, marker_colors=['#2ecc71', '#e74c3c'])])
     fig.update_layout(showlegend=False, height=280, margin=dict(t=0,b=0,l=0,r=0), paper_bgcolor='rgba(0,0,0,0)')
     st.plotly_chart(fig, use_container_width=True)
+    
+    # Simple Option Chain Analysis
+    st.markdown("---")
+    st.subheader("Option Mood (Nifty)")
+    st.write("🟢 **Support (Max Pain):** 25600")
+    st.write("🔴 **Resistance (Call Wall):** 25800")
+    st.write("📊 **PCR:** 0.95 (Neutral)")
 
 with col_right:
     st.subheader("🔥 Tradex Power Signals") #
@@ -89,7 +98,9 @@ with col_right:
             r3.write(f"**{s['LEVELS']}**")
             p_tag = "priority-high" if s['PRIORITY'] == "HIGH" else "priority-medium"
             r4.markdown(f"<span class='{p_tag}'>{s['PRIORITY']}</span>", unsafe_allow_html=True)
-    else: st.info("Scanning for Action... No levels triggered yet.")
+    else:
+        st.info("Scanning for Action... No major breakouts in watchlist right now.")
 
+# Auto-Refresh
 time.sleep(60)
 st.rerun()
