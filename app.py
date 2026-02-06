@@ -1,77 +1,92 @@
 import streamlit as st
 import yfinance as yf
 import pandas as pd
+import time
+from datetime import datetime
 
-# Page layout
-st.set_page_config(layout="wide", page_title="Santosh Stock Scanner")
+# Page Configuration
+st.set_page_config(layout="wide", page_title="Santosh Auto-Scanner")
 
-# Custom CSS for Motilal Oswal Look (Dark Theme & Professional Table)
+# Professional Dark Theme
 st.markdown("""
     <style>
-    .stApp { background-color: #000000; color: white; }
-    table { width: 100% !important; border-collapse: collapse; }
-    th { background-color: #333333 !important; color: #ffca28 !important; text-align: left !important; }
-    td { border: 0.1px solid #444 !important; }
+    .stApp { background-color: #050505; color: #ffffff; }
+    th { background-color: #222 !important; color: #ffca28 !important; font-size: 16px; border: 1px solid #444 !important; }
+    td { font-size: 15px; border: 1px solid #333 !important; padding: 10px !important; }
+    .status-box { padding: 10px; border-radius: 5px; background-color: #1a1a1a; border-left: 5px solid #ffca28; }
     </style>
     """, unsafe_allow_html=True)
 
-st.title("📟 Pro-Trader Intraday Scanner")
+# --- Header with Auto-Refresh Info ---
+col_t1, col_t2 = st.columns([3, 1])
+with col_t1:
+    st.title("📟 Santosh Live Auto-Scanner")
+with col_t2:
+    last_update = datetime.now().strftime("%H:%M:%S")
+    st.markdown(f"<div class='status-box'><b>Last Update:</b> {last_update}<br>Next refresh in 60s</div>", unsafe_allow_html=True)
 
-# Stock List
-tickers = ["GNFC.NS", "INTELLECT.NS", "DRREDDY.NS", "ALKEM.NS", "AXISBANK.NS", "M&M.NS", "COALINDIA.NS", "ICICIBANK.NS", "HAL.NS", "DLF.NS"]
+# --- NSE Stock List (Top Traded) ---
+nse_list = [
+    "RELIANCE", "TCS", "HDFCBANK", "ICICIBANK", "INFY", "AXISBANK", "SBIN", "BHARTIARTL", 
+    "LICI", "ITC", "HINDUNILVR", "LT", "BAJFINANCE", "TATAMOTORS", "SUNPHARMA", "MARUTI", 
+    "ADANIENT", "KOTAKBANK", "TITAN", "ONGC", "TATASTEEL", "NTPC", "ASIANPAINT", "HAL", 
+    "COALINDIA", "BAJAJFINSV", "ADANIPORTS", "JSWSTEEL", "HCLTECH", "M&M", "DRREDDY", 
+    "ADANIPOWER", "CIPLA", "BEL", "ZOMATO", "DLF", "GAIL", "WIPRO", "GNFC", "INTELLECT"
+]
 
-def get_data(stocks):
+# User selection saved in session state
+if 'selected_stocks' not in st.session_state:
+    st.session_state.selected_stocks = ["RELIANCE", "SBIN", "TATAMOTORS", "DLF", "GNFC"]
+
+selected_names = st.multiselect("Stocks add/remove karein:", options=sorted(nse_list), default=st.session_state.selected_stocks)
+st.session_state.selected_stocks = selected_names
+
+def fetch_data(names):
     rows = []
-    for t in stocks:
+    tickers = [n + ".NS" for n in names]
+    for t in tickers:
         try:
             s = yf.Ticker(t)
             df = s.history(period="2d")
             if df.empty: continue
             
             cmp = round(df['Close'].iloc[-1], 2)
-            open_p = df['Open'].iloc[-1]
-            high = df['High'].iloc[-1]
-            low = df['Low'].iloc[-1]
+            open_p = round(df['Open'].iloc[-1], 2)
+            high = round(df['High'].iloc[-1], 2)
+            low = round(df['Low'].iloc[-1], 2)
             
-            # Trading Logic
             action = "BUY EXIT" if cmp > open_p else "SELL EXIT"
-            trend = "Positive" if cmp > open_p else "Negative"
+            trend = "Positive" if cmp > df['Close'].iloc[-2] else "Negative"
             
             rows.append({
                 "Action": action,
                 "Name": t.replace(".NS", ""),
-                "Entry Price": round(open_p, 2),
-                "Stop Loss": round(low * 0.995, 2) if action == "BUY EXIT" else round(high * 1.005, 2),
+                "Entry Price": open_p,
+                "Stop Loss": round(low * 0.998, 2) if action == "BUY EXIT" else round(high * 1.002, 2),
                 "CMP": cmp,
-                "Target": round(cmp * 1.01, 2) if action == "BUY EXIT" else round(cmp * 0.99, 2),
+                "Target": round(cmp * 1.015, 2) if action == "BUY EXIT" else round(cmp * 0.985, 2),
                 "Financial Trend": trend,
-                "Valuation": "Attractive" if trend == "Positive" else "Expensive",
+                "Valuation": "Attractive" if trend == "Positive" else "Fair",
                 "Segment": "Cash & Fut"
             })
-        except:
-            continue
+        except: continue
     return pd.DataFrame(rows)
 
-if st.button('🔄 REFRESH DATA'):
-    data = get_data(tickers)
-else:
-    data = get_data(tickers)
+# Main Table Display
+if st.session_state.selected_stocks:
+    data = fetch_data(st.session_state.selected_stocks)
+    if not data.empty:
+        def style_rows(val):
+            if val == 'BUY EXIT': return 'background-color: #1b5e20; color: white;'
+            if val == 'SELL EXIT': return 'background-color: #b71c1c; color: white;'
+            if val == 'Positive': return 'color: #2ecc71; font-weight: bold'
+            if val == 'Negative': return 'color: #e74c3c; font-weight: bold'
+            return ''
 
-if not data.empty:
-    # Error Fix: .applymap() ki jagah .map() use kiya hai
-    def color_action(val):
-        bg = '#2ecc71' if 'BUY' in val else '#e74c3c'
-        return f'background-color: {bg}; color: white; font-weight: bold'
-
-    def color_trend(val):
-        color = '#2ecc71' if val == 'Positive' else '#e74c3c'
-        return f'color: {color}; font-weight: bold'
-
-    # Displaying clean table without charts
-    styled_df = data.style.map(color_action, subset=['Action']) \
-                          .map(color_trend, subset=['Financial Trend'])
+        st.table(data.style.map(style_rows, subset=['Action', 'Financial Trend']))
     
-    st.table(styled_df)
-
-st.write("---")
-st.caption("Data source: Yahoo Finance | Version: 1.0 (Santosh Scanner)")
+    # --- AUTO REFRESH LOGIC ---
+    time.sleep(60) # 60 seconds wait karega
+    st.rerun()    # Fir apne aap refresh kar dega
+else:
+    st.warning("Please select at least one stock.")
