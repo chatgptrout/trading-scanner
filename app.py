@@ -6,7 +6,7 @@ import time
 from datetime import datetime
 
 # 1. Page Configuration
-st.set_page_config(layout="wide", page_title="Santosh Nifty 50 Terminal")
+st.set_page_config(layout="wide", page_title="Santosh BankNifty Master")
 
 # Professional UI Styling
 st.markdown("""
@@ -23,8 +23,9 @@ st.markdown("""
 
 # 2. Top Bar Logic (Indices & Commodities)
 def get_master_signals():
+    # Adding Bank Nifty Index to Top Bar
     tickers = {
-        "NIFTY 50": "^NSEI", "SENSEX": "^BSESN", 
+        "NIFTY 50": "^NSEI", "BANK NIFTY": "^NSEBANK", 
         "CRUDE OIL": "CL=F", "NAT GAS": "NG=F", 
         "GOLD": "GC=F", "SILVER": "SI=F"
     }
@@ -36,6 +37,7 @@ def get_master_signals():
                 cmp = round(data['Close'].iloc[-1], 2)
                 high, low = data['High'].max(), data['Low'].min()
                 prev_close = data['Close'].iloc[-2]
+                
                 if name == "NAT GAS":
                     if cmp > (high * 0.995): status, color = "🚀 BREAKOUT", "#00ff00"
                     elif cmp < (low * 1.005): status, color = "⚠️ CRASHING", "#ff0000"
@@ -46,23 +48,17 @@ def get_master_signals():
         except: continue
     return results
 
-# 3. FULL NIFTY 50 STOCK LIST
-nifty50_full = [
-    "ADANIENT", "ADANIPORTS", "APOLLOHOSP", "ASIANPAINT", "AXISBANK", "BAJAJ-AUTO", 
-    "BAJFINANCE", "BAJAJFINSV", "BPCL", "BHARTIARTL", "BRITANNIA", "CIPLA", 
-    "COALINDIA", "DIVISLAB", "DRREDDY", "EICHERMOT", "GRASIM", "HCLTECH", 
-    "HDFCBANK", "HDFCLIFE", "HEROMOTOCO", "HINDALCO", "HINDUNILVR", "ICICIBANK", 
-    "ITC", "INDUSINDBK", "INFY", "JSWSTEEL", "KOTAKBANK", "LT", "LTIM", "M&M", 
-    "MARUTI", "NTPC", "NESTLEIND", "ONGC", "POWERGRID", "RELIANCE", "SBILIFE", 
-    "SBIN", "SUNPHARMA", "TCS", "TATACONSUM", "TATAMOTORS", "TATASTEEL", 
-    "TECHM", "TITAN", "ULTRACEMCO", "UPL", "WIPRO"
+# 3. STOCK LIST (Priority: Bank Nifty + Nifty 50)
+master_list = [
+    "HDFCBANK", "ICICIBANK", "SBIN", "AXISBANK", "KOTAKBANK", "INDUSINDBK", 
+    "PNB", "BANKBARODA", "AUBANK", "FEDERALBNK", "IDFCFIRSTB", "BANDHANBNK",
+    "RELIANCE", "TCS", "TATAMOTORS", "INFY", "DLF", "GNFC", "HAL", "LT"
 ]
 
 def get_table_data():
     rows = []
-    # Batch download for 50 stocks
-    data = yf.download([t + ".NS" for t in nifty50_full], period="2d", group_by='ticker', progress=False)
-    for t in nifty50_full:
+    data = yf.download([t + ".NS" for t in master_list], period="2d", group_by='ticker', progress=False)
+    for t in master_list:
         try:
             df = data[t + ".NS"]
             if df.empty: continue
@@ -78,10 +74,10 @@ def get_table_data():
     return pd.DataFrame(rows)
 
 # --- DISPLAY ---
-st.title("📟 Santosh Nifty 50 Live Terminal")
-st.write(f"Scanning 50 Stocks... Last Update: {datetime.now().strftime('%H:%M:%S')}")
+st.title("📟 Santosh Bank Nifty & Equity Terminal")
+st.write(f"Live Market Data | Last Update: {datetime.now().strftime('%H:%M:%S')}")
 
-# A. TOP SIGNALS (Indices & Commodities)
+# A. TOP SIGNALS
 sigs = get_master_signals()
 if sigs:
     cols = st.columns(6)
@@ -91,25 +87,26 @@ if sigs:
 
 st.markdown("---")
 
-# B. BREADTH & TABLE
+# B. BREADTH & TRADE GUIDE
 df = get_table_data()
 if not df.empty:
     c1, c2 = st.columns([1, 2.5])
     with c1:
-        st.subheader("Nifty 50 Breadth")
+        st.subheader("Market Breadth")
         pos, neg = len(df[df['Trend'] == 'Positive']), len(df[df['Trend'] == 'Negative'])
         fig = go.Figure(data=[go.Pie(labels=['Bulls', 'Bears'], values=[pos, neg], hole=.7, marker_colors=['#2ecc71', '#e74c3c'])])
         fig.update_layout(showlegend=False, height=250, margin=dict(t=0,b=0,l=0,r=0), paper_bgcolor='rgba(0,0,0,0)')
         st.plotly_chart(fig, use_container_width=True)
     
     with c2:
-        st.subheader("📊 Motilal Trade Guide (Full Nifty 50)")
+        st.subheader("📊 Motilal Trade Guide (Bank Nifty Priority)")
         def style_rows(val):
             if val == 'BUY EXIT': return 'background-color: #1b5e20; color: white;'
             if val == 'SELL EXIT': return 'background-color: #b71c1c; color: white;'
             return ''
+        # ERROR FIX: Using .map for cleaner UI
         st.table(df.style.map(style_rows, subset=['Action']))
 
-# 4. AUTO REFRESH
+# 4. AUTO REFRESH (Every 60s)
 time.sleep(60)
 st.rerun()
