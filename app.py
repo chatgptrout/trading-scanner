@@ -5,53 +5,48 @@ import plotly.graph_objects as go
 import time
 from datetime import datetime
 
-st.set_page_config(layout="wide", page_title="Santosh Pro Hybrid")
+# Page Configuration
+st.set_page_config(layout="wide", page_title="Santosh Nifty50 Scanner")
 
-# Custom CSS for Dark UI
+# Professional Dark UI
 st.markdown("""
     <style>
-    .stApp { background-color: #050505; color: white; }
-    th { background-color: #222 !important; color: #ffca28 !important; }
+    .stApp { background-color: #000000; color: white; }
+    th { background-color: #222 !important; color: #ffca28 !important; border: 1px solid #444 !important; }
+    td { border: 1px solid #333 !important; }
     </style>
     """, unsafe_allow_html=True)
 
-# --- 1. Top Section: IntradayPulse Style Chart ---
-def draw_circular_chart(data):
-    # Mapping colors for the donut chart
-    colors = ['#2ecc71' if x == 'Positive' else '#e74c3c' for x in data['Financial Trend']]
-    
-    fig = go.Figure(data=[go.Pie(
-        labels=data['Symbol'], 
-        values=[1]*len(data),
-        hole=.7,
-        marker_colors=colors,
-        textinfo='label',
-        hoverinfo='label+percent'
-    )])
-    
-    fig.update_layout(
-        showlegend=False,
-        margin=dict(t=0, b=0, l=0, r=0),
-        height=350,
-        paper_bgcolor='rgba(0,0,0,0)',
-        plot_bgcolor='rgba(0,0,0,0)',
-        annotations=[dict(text='MARKET<br>BREADTH', x=0.5, y=0.5, font_size=20, showarrow=False)]
-    )
-    return fig
+# --- NIFTY 50 TICKER LIST ---
+nifty50_tickers = [
+    "ADANIENT", "ADANIPORTS", "APOLLOHOSP", "ASIANPAINT", "AXISBANK", "BAJAJ-AUTO", 
+    "BAJFINANCE", "BAJAJFINSV", "BPCL", "BHARTIARTL", "BRITANNIA", "CIPLA", 
+    "COALINDIA", "DIVISLAB", "DRREDDY", "EICHERMOT", "GRASIM", "HCLTECH", 
+    "HDFCBANK", "HDFCLIFE", "HEROMOTOCO", "HINDALCO", "HINDUNILVR", "ICICIBANK", 
+    "ITC", "INDUSINDBK", "INFY", "JSWSTEEL", "KOTAKBANK", "LT", "LTIM", "M&M", 
+    "MARUTI", "NTPC", "NESTLEIND", "ONGC", "POWERGRID", "RELIANCE", "SBILIFE", 
+    "SBIN", "SUNPHARMA", "TCS", "TATACONSUM", "TATAMOTORS", "TATASTEEL", 
+    "TECHM", "TITAN", "ULTRACEMCO", "UPL", "WIPRO"
+]
 
-# --- 2. Data Fetching Logic ---
-nse_list = ["RELIANCE", "TCS", "HDFCBANK", "SBIN", "TATAMOTORS", "INFY", "ICICIBANK", "DLF", "GNFC", "HAL"]
-
-def get_live_data(names):
+def fetch_nifty_data(tickers):
     rows = []
-    for t in names:
+    # Adding .NS for Yahoo Finance
+    formatted_tickers = [t + ".NS" for t in tickers]
+    
+    # Batch download for speed
+    data = yf.download(formatted_tickers, period="2d", group_by='ticker', interval="1m", progress=False)
+    
+    for t in tickers:
         try:
-            stock = yf.Ticker(t + ".NS")
-            df = stock.history(period="2d")
+            df = data[t + ".NS"]
             if df.empty: continue
+            
             cmp = round(df['Close'].iloc[-1], 2)
-            open_p = df['Open'].iloc[-1]
+            open_p = round(df['Open'].iloc[0], 2) # Today's open
             prev_close = df['Close'].iloc[-2]
+            high = df['High'].max()
+            low = df['Low'].min()
             
             action = "BUY EXIT" if cmp > open_p else "SELL EXIT"
             trend = "Positive" if cmp > prev_close else "Negative"
@@ -59,7 +54,8 @@ def get_live_data(names):
             rows.append({
                 "Action": action,
                 "Symbol": t,
-                "Entry": round(open_p, 2),
+                "Entry": open_p,
+                "Stop Loss": round(low * 0.998, 2) if action == "BUY EXIT" else round(high * 1.002, 2),
                 "CMP": cmp,
                 "Target": round(cmp * 1.015, 2) if action == "BUY EXIT" else round(cmp * 0.985, 2),
                 "Financial Trend": trend,
@@ -68,36 +64,35 @@ def get_live_data(names):
         except: continue
     return pd.DataFrame(rows)
 
-# --- 3. UI Layout ---
-st.title("📟 Santosh Hybrid Terminal")
-current_time = datetime.now().strftime("%H:%M:%S")
-st.write(f"Auto-refreshing... Last update: {current_time}")
+# --- UI EXECUTION ---
+st.title("📟 Santosh Nifty 50 Live Terminal")
+st.write(f"Scanning 50 Stocks... Last Update: {datetime.now().strftime('%H:%M:%S')}")
 
-df_final = get_live_data(nse_list)
+df_nifty = fetch_nifty_data(nifty50_tickers)
 
-if not df_final.empty:
-    col1, col2 = st.columns([1, 2])
+if not df_nifty.empty:
+    # 1. Circular Chart (IntradayPulse Style)
+    pos_count = len(df_nifty[df_nifty['Financial Trend'] == 'Positive'])
+    neg_count = len(df_nifty[df_nifty['Financial Trend'] == 'Negative'])
     
-    with col1:
-        st.subheader("Index Mover Trend")
-        st.plotly_chart(draw_circular_chart(df_final), use_container_width=True)
-    
-    with col2:
-        st.subheader("Top Contributors")
-        # List of top gainers/losers logic
-        st.dataframe(df_final[['Symbol', 'CMP', 'Financial Trend']].sort_values(by='CMP', ascending=False), height=300)
+    fig = go.Figure(data=[go.Pie(
+        labels=['Positive', 'Negative'], 
+        values=[pos_count, neg_count],
+        hole=.7,
+        marker_colors=['#2ecc71', '#e74c3c']
+    )])
+    fig.update_layout(height=300, margin=dict(t=0, b=0, l=0, r=0), paper_bgcolor='rgba(0,0,0,0)', showlegend=False)
+    st.plotly_chart(fig, use_container_width=True)
 
-    st.markdown("---")
-    st.subheader("📊 Intraday Trade Guide (Motilal Style)")
-    
-    # Styling for the main table
-    def style_final(val):
+    # 2. Detailed Table (Motilal Style)
+    def color_rows(val):
         if val == 'BUY EXIT': return 'background-color: #1b5e20; color: white;'
         if val == 'SELL EXIT': return 'background-color: #b71c1c; color: white;'
         return ''
 
-    st.table(df_final.style.map(style_final, subset=['Action']))
+    st.subheader("📊 Intraday Trade Guide")
+    st.table(df_nifty.style.map(color_rows, subset=['Action']))
 
-# Auto Refresh logic
+# 3. Auto-Refresh Logic
 time.sleep(60)
 st.rerun()
