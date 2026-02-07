@@ -1,77 +1,69 @@
 import streamlit as st
 import yfinance as yf
-import plotly.express as px
-import plotly.graph_objects as go
 import pandas as pd
 import time
 
-st.set_page_config(page_title="SANTOSH ALL-IN-ONE", layout="wide")
+st.set_page_config(page_title="SANTOSH TRADEX ONLY", layout="wide")
 
-# Dark Theme + Custom Boxes Styling (Screenshot 1000104752 Style)
+# Dark Theme + Tradex Box Styling
 st.markdown("""<style>
     .stApp { background-color: #010b14; color: white; }
-    .signal-box { background: #0d1b2a; padding: 15px; border-radius: 10px; border-left: 5px solid #ff4b2b; height: 120px; }
-    .price-text { font-size: 14px; color: #888; }
-    .level-text { font-size: 18px; font-weight: bold; margin: 5px 0; }
+    .tradex-card { 
+        background: #0d1b2a; padding: 25px; border-radius: 12px; 
+        border-left: 8px solid #ff4b2b; margin-bottom: 20px; 
+        box-shadow: 0 4px 15px rgba(0,0,0,0.3);
+    }
+    .level-val { font-size: 24px; font-weight: bold; color: #ff4b2b; margin-top: 10px; }
+    .ltp-val { font-size: 14px; color: #888; }
 </style>""", unsafe_allow_html=True)
 
-# 1. DATA FETCHING
+st.markdown("<h1 style='text-align:center; color:#1a73e8;'>🎯 TRADEX LIVE SIGNALS</h1>", unsafe_allow_html=True)
+
+# 1. HEATMAP SECTION (As per your 1000104630.jpg preference)
+import plotly.express as px
 watchlist = ["SUNPHARMA.NS", "SBIN.NS", "DRREDDY.NS", "CIPLA.NS", "RELIANCE.NS", "CL=F"]
 
-def get_data():
+def get_map_data():
     rows = []
     for s in watchlist:
         try:
             t = yf.Ticker(s).fast_info
-            rows.append({"Symbol": s.replace(".NS",""), "Full": s, "Price": t['last_price'], 
+            rows.append({"Symbol": s.replace(".NS",""), "Price": t['last_price'], 
                          "Change": ((t['last_price'] - t['previous_close']) / t['previous_close']) * 100})
         except: continue
     return pd.DataFrame(rows)
 
-df = get_data()
+df = get_map_data()
+st.markdown("### 🟥 MARKET HEATMAP")
+fig = px.treemap(df, path=['Symbol'], values=[abs(x)+1 for x in df['Change']],
+                 color='Change', color_continuous_scale=['#8B0000', '#FF0000', '#333333', '#00FF00'])
+fig.update_layout(margin=dict(t=0, l=0, r=0, b=0), height=300, template="plotly_dark")
+st.plotly_chart(fig, use_container_width=True)
 
-# 2. TOP SECTION: HEATMAP & CHART (Side-by-Side)
-col_map, col_chart = st.columns([1, 2])
-
-with col_map:
-    st.markdown("### 🟥 DEEP RED HEATMAP")
-    fig = px.treemap(df, path=['Symbol'], values=[abs(x)+1 for x in df['Change']],
-                     color='Change', color_continuous_scale=['#8B0000', '#FF0000', '#333333', '#00FF00'],
-                     custom_data=['Full'])
-    fig.update_layout(margin=dict(t=0, l=0, r=0, b=0), height=350, template="plotly_dark")
-    selected = st.plotly_chart(fig, use_container_width=True, on_select="rerun", key="main_map")
-
-with col_chart:
-    active = "SUNPHARMA.NS"
-    if selected and "selection" in selected and selected["selection"]["points"]:
-        active = selected["selection"]["points"][0]["customdata"][0]
-    
-    st.markdown(f"### 📈 LIVE CHART: {active}")
-    h = yf.Ticker(active).history(period='1d', interval='5m')
-    chart = go.Figure(data=[go.Candlestick(x=h.index, open=h['Open'], high=h['High'], low=h['Low'], close=h['Close'],
-                                         increasing_line_color='#00ff88', decreasing_line_color='#ff4b2b')])
-    chart.update_layout(template='plotly_dark', xaxis_rangeslider_visible=False, height=350, margin=dict(l=0,r=0,t=0,b=0))
-    st.plotly_chart(chart, use_container_width=True, key=f"chart_{active}")
-
-# 3. BOTTOM SECTION: TRADEX SIGNALS (Exactly like 1000104752.jpg)
+# 2. TRADEX SIGNALS SECTION (The main thing you wanted)
 st.markdown("---")
-st.markdown("### 🎯 TRADEX SIGNALS (QUICK MONEY)")
-t1, t2, t3 = st.columns(3)
+st.markdown("### 🚀 QUICK MONEY LEVELS")
+c1, c2, c3 = st.columns(3)
 
-# Logic for dynamic levels
-for (name, col, sym) in zip(["CRUDE OIL", "NIFTY", "BANK NIFTY"], [t1, t2, t3], ["CL=F", "^NSEI", "^NSEBANK"]):
-    curr_p = yf.Ticker(sym).fast_info['last_price']
-    
-    if "CRUDE" in name:
-        sig, color = f"BEARISH BELOW {int(curr_p*90 - 15)}", "#ff4b2b"
-    else:
-        sig, color = f"REVERSAL AT {int(curr_p + 45)}", "#00ff88"
+scripts = [("CRUDE OIL", "CL=F"), ("NIFTY", "^NSEI"), ("BANK NIFTY", "^NSEBANK")]
+cols = [c1, c2, c3]
 
-    col.markdown(f"""<div class="signal-box">
-        <h4 style="margin:0;">{name}</h4>
-        <p class="level-text" style="color:{color};">{sig}</p>
-        <p class="price-text">LTP: {curr_p:.2f}</p>
-    </div>""", unsafe_allow_html=True)
+for (name, sym), col in zip(scripts, cols):
+    try:
+        curr_p = yf.Ticker(sym).fast_info['last_price']
+        if "CRUDE" in name:
+            signal = f"BEARISH BELOW {int(curr_p*90.5 - 15)}"
+            color = "#ff4b2b"
+        else:
+            signal = f"REVERSAL AT {int(curr_p + 50)}"
+            color = "#00ff88"
+            
+        col.markdown(f"""<div class="tradex-card">
+            <h3 style="margin:0;">{name}</h3>
+            <div class="level-val" style="color:{color};">{signal}</div>
+            <div class="ltp-val">LTP: {curr_p:.2f}</div>
+        </div>""", unsafe_allow_html=True)
+    except: continue
 
-time.sleep(20)
+time.sleep(30)
 st.rerun()
