@@ -6,63 +6,88 @@ import time
 from datetime import datetime
 
 # 1. Page Configuration
-st.set_page_config(layout="wide", page_title="Tradex Live Signals")
+st.set_page_config(layout="wide", page_title="Santosh Tradex Master", initial_sidebar_state="collapsed")
 
-# Custom Tradex Style UI
+# Tradex Style UI (White Theme with Power Logic)
 st.markdown("""
     <style>
     .stApp { background-color: #ffffff; color: #333; }
-    .tradex-header { background-color: #f8f9fa; padding: 10px; border-bottom: 2px solid #eee; margin-bottom: 20px; }
-    .status-live { background-color: #ff4b4b; color: white; padding: 2px 8px; border-radius: 4px; font-size: 12px; font-weight: bold; }
+    .tradex-header { background-color: #f8f9fa; padding: 15px; border-bottom: 2px solid #eee; margin-bottom: 20px; display: flex; justify-content: space-between; align-items: center; }
+    .status-live { background-color: #ff4b4b; color: white; padding: 3px 10px; border-radius: 4px; font-size: 12px; font-weight: bold; }
     .priority-tag { background-color: #e3f2fd; color: #1976d2; padding: 4px 12px; border-radius: 20px; font-size: 11px; font-weight: bold; border: 1px solid #bbdefb; }
-    th { color: #888 !important; font-size: 12px !important; text-transform: uppercase; border-bottom: 1px solid #eee !important; }
-    td { padding: 15px !important; border-bottom: 1px solid #f5f5f5 !important; font-size: 14px; }
+    .index-card { background-color: #f8f9fa; border: 1px solid #eee; padding: 10px; border-radius: 8px; text-align: center; }
     </style>
     """, unsafe_allow_html=True)
 
-# 2. Reversal & Trend Logic
-def get_tradex_logic():
-    # Watchlist based on your images
-    watchlist = {"NIFTY": "^NSEI", "CRUDE FEB FUT": "CL=F", "BANK NIFTY": "^NSEBANK", "POWERINDIA": "POWERINDIA.NS"}
-    signals = []
+# 2. RSI Calculation
+def calculate_rsi(data, window=14):
+    delta = data.diff()
+    gain = (delta.where(delta > 0, 0)).rolling(window=window).mean()
+    loss = (-delta.where(delta < 0, 0)).rolling(window=window).mean()
+    rs = gain / loss
+    return 100 - (100 / (1 + rs))
+
+# 3. Data Engine (Indices + Stocks)
+def get_master_data():
+    indices = {"NIFTY 50": "^NSEI", "BANK NIFTY": "^NSEBANK", "CRUDE OIL": "CL=F", "NAT GAS": "NG=F"}
+    power_list = ["RELIANCE", "TCS", "HDFCBANK", "ICICIBANK", "SBIN", "INFY", "TATAMOTORS", "POWERINDIA", "DLF", "GNFC"]
     
-    for name, sym in watchlist.items():
+    # Indices status
+    idx_results = []
+    for name, sym in indices.items():
         try:
-            data = yf.download(sym, period="2d", interval="5m", progress=False)
-            if data.empty: continue
-            
-            h, l, cmp = round(data['High'].max(), 2), round(data['Low'].min(), 2), round(data['Close'].iloc[-1], 2)
-            
-            # Reversal Logic (Tradex Style)
-            if cmp >= (h * 0.999):
-                signals.append({"SCRIPT": name, "LEVELS": f"REVERSAL POSSIBLE FROM {h}", "MSG": "OVERBOUGHT ZONE", "PRIORITY": "MEDIUM"})
-            elif cmp <= (l * 1.001):
-                signals.append({"SCRIPT": name, "LEVELS": f"BEARISH BELOW {l}", "MSG": "BREAKDOWN IMMINENT", "PRIORITY": "HIGH"})
+            d = yf.Ticker(sym).history(period="1d", interval="5m")
+            if not d.empty:
+                cmp, prev = round(d['Close'].iloc[-1], 2), d['Close'].iloc[-2]
+                col = "#2ecc71" if cmp > prev else "#e74c3c"
+                idx_results.append({"name": name, "cmp": cmp, "col": col})
         except: continue
-    return signals
+
+    # Power Signals with Tradex Style Messages
+    tickers = [t + ".NS" if t != "POWERINDIA" else t for t in power_list]
+    raw = yf.download(tickers, period="5d", interval="5m", group_by='ticker', progress=False)
+    
+    signals, bulls, bears = [], 0, 0
+    for t in power_list:
+        try:
+            df = raw[t + ".NS" if t != "POWERINDIA" else t].dropna()
+            if df.empty: continue
+            h, l, cmp = round(df['High'].max(), 2), round(df['Low'].min(), 2), round(df['Close'].iloc[-1], 2)
+            df['RSI'] = calculate_rsi(df['Close'])
+            rsi = round(df['RSI'].iloc[-1], 2)
+            
+            if cmp > df['Close'].iloc[-2]: bulls += 1
+            else: bears += 1
+
+            # Tradex Power Filter
+            if cmp >= (h * 0.997) or cmp <= (l * 1.003):
+                msg = f"REVERSAL POSSIBLE FROM {h}" if cmp >= h else f"BEARISH BELOW {l}"
+                signals.append({"S": t, "L": msg, "RSI": rsi, "P": "HIGH" if rsi > 70 or rsi < 30 else "MEDIUM"})
+        except: continue
+        
+    return idx_results, signals, bulls, bears
 
 # --- DISPLAY ---
-st.markdown("<div class='tradex-header'><b>TRADEX</b> <span class='status-live'>LIVE</span> &nbsp;&nbsp; <small>Search signals...</small></div>", unsafe_allow_html=True)
+idx_res, sig_res, bulls, bears = get_master_data()
 
-live_signals = get_tradex_logic()
+# Header
+st.markdown(f"""
+    <div class='tradex-header'>
+        <div><b>TRADEX</b> <span class='status-live'>LIVE</span></div>
+        <div style='color:#888;'>{datetime.now().strftime('%H:%M:%S')}</div>
+    </div>
+    """, unsafe_allow_html=True)
 
-if live_signals:
-    # Building the table exactly like image_c5aa14.jpg
-    c1, c2, c3, c4 = st.columns([1.5, 2, 2.5, 1])
-    c1.write("**SCRIPT**")
-    c2.write("**SIGNAL**")
-    c3.write("**LEVELS / MESSAGE**")
-    c4.write("**PRIORITY**")
-    st.markdown("<hr style='margin:0'>", unsafe_allow_html=True)
-    
-    for s in live_signals:
-        r1, r2, r3, r4 = st.columns([1.5, 2, 2.5, 1])
-        r1.write(f"**{s['SCRIPT']}**")
-        r2.markdown("<span style='color:#888; background:#f0f0f0; padding:3px 8px; border-radius:4px;'>SIGNAL</span>", unsafe_allow_html=True)
-        r3.write(f"{s['LEVELS']}")
-        r4.markdown(f"<span class='priority-tag'>{s['PRIORITY']}</span>", unsafe_allow_html=True)
-else:
-    st.info("No active high-probability signals. Waiting for reversal levels...")
+# Top Indices Cards
+cols = st.columns(len(idx_res))
+for i, x in enumerate(idx_res):
+    with cols[i]:
+        st.markdown(f"<div class='index-card'><small style='color:#888'>{x['name']}</small><h4 style='color:{x['col']}; margin:0'>{x['cmp']}</h4></div>", unsafe_allow_html=True)
 
-time.sleep(60)
-st.rerun()
+st.markdown("<br>", unsafe_allow_html=True)
+
+col_left, col_right = st.columns([1, 2.5])
+
+with col_left:
+    st.subheader("Market Breadth") #
+    fig = go.Figure(data=[go.Pie(labels=['Bulls', 'Bears'], values=[bulls, bears], hole=.7, marker_colors
