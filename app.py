@@ -1,104 +1,83 @@
 import streamlit as st
 import yfinance as yf
-import pandas as pd
+import plotly.express as px
 import plotly.graph_objects as go
+import pandas as pd
 import time
-from datetime import datetime
 
-# 1. Page Config & Professional UI
-st.set_page_config(layout="wide", page_title="Santosh Tradex Master", initial_sidebar_state="collapsed")
+st.set_page_config(page_title="SANTOSH PC PRO", layout="wide")
 
-st.markdown("""
-    <style>
-    .stApp { background-color: #ffffff; color: #333; }
-    .tradex-header { background-color: #f8f9fa; padding: 15px; border-bottom: 2px solid #eee; margin-bottom: 20px; display: flex; justify-content: space-between; }
-    .status-live { background-color: #ff4b4b; color: white; padding: 3px 10px; border-radius: 4px; font-size: 12px; font-weight: bold; }
-    .index-card { background-color: #f8f9fa; border: 1px solid #eee; padding: 10px; border-radius: 8px; text-align: center; }
-    .priority-tag { background-color: #e3f2fd; color: #1976d2; padding: 4px 12px; border-radius: 20px; font-size: 11px; font-weight: bold; border: 1px solid #bbdefb; }
-    </style>
-    """, unsafe_allow_html=True)
+# Dark Glass UI Style
+st.markdown("""<style>
+    .stApp { background-color: #010b14; color: white; }
+    .tradex-box { background: #0d1b2a; padding: 20px; border-radius: 12px; border-left: 6px solid #ff4b2b; margin-bottom: 10px; }
+    .price-up { color: #00ff88; font-weight: bold; }
+    .price-down { color: #ff4b2b; font-weight: bold; }
+</style>""", unsafe_allow_html=True)
 
-# 2. RSI & Data Engine
-def calculate_rsi(data, window=14):
-    delta = data.diff()
-    gain = (delta.where(delta > 0, 0)).rolling(window=window).mean()
-    loss = (-delta.where(delta < 0, 0)).rolling(window=window).mean()
-    rs = gain / loss
-    return 100 - (100 / (1 + rs))
+# 1. DATA ENGINE (Pharma + Heavyweights)
+watchlist = ["SUNPHARMA.NS", "CIPLA.NS", "DRREDDY.NS", "SBIN.NS", "RELIANCE.NS", "ZOMATO.NS", "CL=F"]
 
 def get_master_data():
-    indices = {"NIFTY 50": "^NSEI", "BANK NIFTY": "^NSEBANK", "CRUDE OIL": "CL=F", "NAT GAS": "NG=F", "GOLD": "GC=F", "SILVER": "SI=F"}
-    power_list = ["RELIANCE", "TCS", "HDFCBANK", "ICICIBANK", "SBIN", "INFY", "TATAMOTORS", "POWERINDIA", "DLF", "GNFC"]
-    
-    idx_res = []
-    for name, sym in indices.items():
+    rows = []
+    for s in watchlist:
         try:
-            d = yf.Ticker(sym).history(period="1d", interval="5m")
-            if not d.empty:
-                cmp = round(d['Close'].iloc[-1], 2)
-                prev = d['Close'].iloc[-2]
-                col = "#2ecc71" if cmp > prev else "#e74c3c"
-                idx_res.append({"name": name, "cmp": cmp, "col": col})
+            t = yf.Ticker(s).fast_info
+            p, c = t['last_price'], ((t['last_price'] - t['previous_close']) / t['previous_close']) * 100
+            rows.append({"Symbol": s.replace(".NS",""), "Full": s, "Price": p, "Change": c})
         except: continue
+    return pd.DataFrame(rows)
 
-    all_tickers = [t + ".NS" if t != "POWERINDIA" else t for t in power_list]
-    raw = yf.download(all_tickers, period="5d", interval="5m", group_by='ticker', progress=False)
-    
-    signals, bulls, bears = [], 0, 0
-    for t in power_list:
-        try:
-            df = raw[t + ".NS" if t != "POWERINDIA" else t].dropna()
-            if df.empty: continue
-            h, l, cmp = round(df['High'].max(), 2), round(df['Low'].min(), 2), round(df['Close'].iloc[-1], 2)
-            df['RSI'] = calculate_rsi(df['Close'])
-            rsi = round(df['RSI'].iloc[-1], 2)
-            
-            if cmp > df['Close'].iloc[-2]: bulls += 1
-            else: bears += 1
+df = get_master_data()
 
-            if cmp >= (h * 0.997) or cmp <= (l * 1.003):
-                msg = f"REVERSAL POSSIBLE FROM {h}" if cmp >= h else f"BEARISH BELOW {l}"
-                signals.append({"S": t, "L": msg, "RSI": rsi, "P": "HIGH" if rsi > 70 or rsi < 30 else "MEDIUM"})
-        except: continue
-        
-    return idx_res, signals, bulls, bears
-
-# --- DISPLAY ---
-idx_res, sig_res, bulls, bears = get_master_data()
-
-st.markdown(f"<div class='tradex-header'><div><b>TRADEX</b> <span class='status-live'>LIVE</span></div><div>{datetime.now().strftime('%H:%M:%S')}</div></div>", unsafe_allow_html=True)
-
-# Top Indices
-i_cols = st.columns(len(idx_res))
-for i, x in enumerate(idx_res):
-    with i_cols[i]:
-        st.markdown(f"<div class='index-card'><small>{x['name']}</small><h4 style='color:{x['col']}; margin:0'>{x['cmp']}</h4></div>", unsafe_allow_html=True)
-
-st.markdown("<br>", unsafe_allow_html=True)
-
-col1, col2 = st.columns([1, 2.5])
+# 2. PC LAYOUT (Side-by-Side)
+col1, col2 = st.columns([1.2, 2])
 
 with col1:
-    st.subheader("Market Breadth") # RESTORED
-    if (bulls + bears) > 0:
-        fig = go.Figure(data=[go.Pie(labels=['Bulls', 'Bears'], values=[bulls, bears], hole=.7, marker_colors=['#2ecc71', '#e74c3c'])])
-        fig.update_layout(showlegend=False, height=250, margin=dict(t=0,b=0,l=0,r=0), paper_bgcolor='rgba(0,0,0,0)')
-        st.plotly_chart(fig, use_container_width=True) # FIXED ERROR HERE
+    st.markdown("### 🟥 DEEP RED HEATMAP")
+    fig = px.treemap(df, path=['Symbol'], values=[abs(x)+1 for x in df['Change']],
+                     color='Change', color_continuous_scale=['#8B0000', '#FF0000', '#333333', '#00FF00'],
+                     custom_data=['Full'])
+    fig.update_layout(margin=dict(t=0, l=0, r=0, b=0), height=400, template="plotly_dark")
+    # Click interaction for PC
+    selected = st.plotly_chart(fig, use_container_width=True, on_select="rerun", key="pc_heat")
 
 with col2:
-    st.subheader("🔥 Tradex Power Signals") # RESTORED
-    if sig_res:
-        c1, c2, c3, c4 = st.columns([1, 2, 0.8, 1])
-        c1.write("**SCRIPT**"); c2.write("**LEVELS / MESSAGE**"); c3.write("**RSI**"); c4.write("**PRIORITY**")
-        st.markdown("<hr style='margin:5px 0'>", unsafe_allow_html=True)
-        for s in sig_res:
-            r1, r2, r3, r4 = st.columns([1, 2, 0.8, 1])
-            r1.write(f"**{s['S']}**")
-            r2.write(f"✔️ {s['L']}") # Tick Mark Restored
-            r3.write(f"{s['RSI']}")
-            r4.markdown(f"<span class='priority-tag'>{s['P']}</span>", unsafe_allow_html=True)
-    else:
-        st.info("Scanning... No Power signals right now.")
+    # Sync Logic: Clicked stock ya default SUNPHARMA
+    active = "SUNPHARMA.NS"
+    if selected and "selection" in selected and selected["selection"]["points"]:
+        active = selected["selection"]["points"][0]["customdata"][0]
+    
+    st.markdown(f"### 📈 LIVE CHART: {active}")
+    h = yf.Ticker(active).history(period='1d', interval='5m')
+    chart = go.Figure(data=[go.Candlestick(x=h.index, open=h['Open'], high=h['High'], low=h['Low'], close=h['Close'],
+                                         increasing_line_color='#00ff88', decreasing_line_color='#ff4b2b')])
+    chart.update_layout(template='plotly_dark', xaxis_rangeslider_visible=False, height=400, margin=dict(l=0,r=0,t=0,b=0))
+    st.plotly_chart(chart, use_container_width=True, key=f"pc_chart_{active}")
 
-time.sleep(60)
+# 3. TRADEX LEVELS (Bottom Section) - 1000104659.jpg Style
+st.markdown("---")
+st.markdown("### 🎯 TRADEX SIGNALS (QUICK MONEY)")
+t1, t2, t3 = st.columns(3)
+
+for (name, col) in zip(["CRUDE OIL", "NIFTY", "BANK NIFTY"], [t1, t2, t3]):
+    # Example logic for levels based on current price
+    sym = "CL=F" if "CRUDE" in name else ("^NSEI" if "NIFTY" == name else "^NSEBANK")
+    curr_p = yf.Ticker(sym).fast_info['last_price']
+    
+    if "CRUDE" in name:
+        level_p = int(curr_p * 90.5) # Crude Feb Fut estimation
+        sig = f"BEARISH BELOW {level_p - 20}"
+        color = "price-down"
+    else:
+        sig = f"REVERSAL AT {int(curr_p + 40)}"
+        color = "price-up"
+
+    col.markdown(f"""<div class="tradex-box">
+        <h4 style="margin:0;">{name}</h4>
+        <p class="{color}" style="font-size:18px; margin:10px 0;">{sig}</p>
+        <small>LTP: {curr_p:.2f}</small>
+    </div>""", unsafe_allow_html=True)
+
+time.sleep(30)
 st.rerun()
