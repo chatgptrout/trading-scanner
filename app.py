@@ -6,17 +6,16 @@ import time
 from datetime import datetime
 
 # 1. Page Config
-st.set_page_config(layout="wide", page_title="Santosh Ultimate Terminal", initial_sidebar_state="collapsed")
+st.set_page_config(layout="wide", page_title="Santosh Index Mover Pro", initial_sidebar_state="collapsed")
 
 # Professional White UI
 st.markdown("""
     <style>
     .stApp { background-color: #ffffff; color: #333; }
     .tradex-header { background-color: #f8f9fa; padding: 15px; border-bottom: 2px solid #eee; margin-bottom: 20px; display: flex; justify-content: space-between; }
-    .index-card { background-color: #f8f9fa; border: 1px solid #eee; padding: 10px; border-radius: 8px; text-align: center; margin-bottom: 10px; }
+    .index-card { background-color: #f8f9fa; border: 1px solid #eee; padding: 10px; border-radius: 8px; text-align: center; }
+    .contributor-item { display: flex; justify-content: space-between; padding: 8px; border-radius: 5px; margin-bottom: 5px; font-size: 13px; border-left: 4px solid #eee; }
     .rocker-box { border: 1px solid #eee; padding: 15px; border-radius: 8px; text-align: center; }
-    .swing-card { background-color: #fff; border: 1px solid #eee; padding: 12px; border-radius: 10px; margin-top: 15px; }
-    .status-live { background-color: #ff4b4b; color: white; padding: 3px 10px; border-radius: 4px; font-size: 12px; font-weight: bold; }
     </style>
     """, unsafe_allow_html=True)
 
@@ -24,9 +23,10 @@ st.markdown("""
 @st.cache_data(ttl=60)
 def fetch_master_data():
     indices = {"NIFTY 50": "^NSEI", "BANK NIFTY": "^NSEBANK", "CRUDE OIL": "CL=F", "NAT GAS": "NG=F", "GOLD": "GC=F", "SILVER": "SI=F"}
-    power_list = ["RELIANCE", "TCS", "HDFCBANK", "ICICIBANK", "SBIN", "INFY", "TATAMOTORS", "POWERINDIA", "DLF", "GNFC"]
+    # Top 10 heavyweights for Index Mover logic
+    heavyweights = ["RELIANCE", "HDFCBANK", "ICICIBANK", "INFY", "TCS", "ITC", "AXISBANK", "LT", "SBIN", "BHARTIARTL"]
     
-    # A. Indices
+    # A. Index Bar
     idx_res = []
     for name, sym in indices.items():
         try:
@@ -38,29 +38,30 @@ def fetch_master_data():
                 idx_res.append({"name": name, "cmp": cmp, "col": col})
         except: continue
 
-    # B. Signals
-    tickers = [t + ".NS" if t != "POWERINDIA" else t for t in power_list]
-    raw = yf.download(tickers, period="5d", interval="5m", group_by='ticker', progress=False)
-    sig_res, bulls, bears = [], 0, 0
-    for t in power_list:
+    # B. Contributors & Rockers
+    tickers = [t + ".NS" for t in heavyweights]
+    raw = yf.download(tickers, period="2d", interval="5m", group_by='ticker', progress=False)
+    
+    contributors, bulls, bears = [], 0, 0
+    for t in heavyweights:
         try:
-            df = raw[t + ".NS" if t != "POWERINDIA" else t].dropna()
+            df = raw[t + ".NS"].dropna()
             if df.empty: continue
-            h, l, cmp = round(df['High'].max(), 2), round(df['Low'].min(), 2), round(df['Close'].iloc[-1], 2)
-            if cmp > df['Close'].iloc[-2]: bulls += 1
+            cmp = df['Close'].iloc[-1]
+            chg = round(((cmp - df['Close'].iloc[-2]) / df['Close'].iloc[-2]) * 100, 2)
+            if chg > 0: bulls += 1
             else: bears += 1
-            if cmp >= (h * 0.998) or cmp <= (l * 1.002):
-                msg = f"REVERSAL POSSIBLE FROM {h}" if cmp >= (h*0.999) else f"BEARISH BELOW {l}"
-                sig_res.append({"S": t, "L": msg})
+            contributors.append({"name": t, "chg": chg, "col": "#2ecc71" if chg > 0 else "#e74c3c"})
         except: continue
-    return idx_res, sig_res, bulls, bears
+    
+    return idx_res, sorted(contributors, key=lambda x: x['chg'], reverse=True), bulls, bears
 
 # --- DISPLAY ---
-idx_res, sig_res, bulls, bears = fetch_master_data()
+idx_res, contributors, bulls, bears = fetch_master_data()
 
-st.markdown(f"<div class='tradex-header'><div><b>TRADEX</b> <span class='status-live'>LIVE</span></div><div>{datetime.now().strftime('%H:%M:%S')}</div></div>", unsafe_allow_html=True)
+st.markdown(f"<div class='tradex-header'><div><b>TRADEX</b> <span style='background:#ff4b4b; color:white; padding:2px 8px; border-radius:4px;'>LIVE</span></div><div>{datetime.now().strftime('%H:%M:%S')}</div></div>", unsafe_allow_html=True)
 
-# 1. Index Bar (RESTORED)
+# 1. RESTORED Index Bar
 i_cols = st.columns(len(idx_res))
 for i, x in enumerate(idx_res):
     with i_cols[i]:
@@ -68,33 +69,34 @@ for i, x in enumerate(idx_res):
 
 st.markdown("---")
 
-# 2. Market Rockers (NEW)
+# 2. Market Rockers
 r1, r2, r3 = st.columns(3)
-with r1: st.markdown(f"<div class='rocker-box' style='background:#f1f8f6; border-color:#d1e7dd;'><h2 style='color:#198754; margin:0;'>{bulls} Stocks Up</h2><small>Bullish Sentiment</small></div>", unsafe_allow_html=True)
-with r2: st.markdown(f"<div class='rocker-box' style='background:#fff5f5; border-color:#f8d7da;'><h2 style='color:#dc3545; margin:0;'>{bears} Stocks Down</h2><small>Bearish Pressure</small></div>", unsafe_allow_html=True)
+with r1: st.markdown(f"<div class='rocker-box' style='background:#f1f8f6;'><h2 style='color:#198754; margin:0;'>{bulls} Up</h2><small>Bullish Sentiment</small></div>", unsafe_allow_html=True)
+with r2: st.markdown(f"<div class='rocker-box' style='background:#fff5f5;'><h2 style='color:#dc3545; margin:0;'>{bears} Down</h2><small>Bearish Pressure</small></div>", unsafe_allow_html=True)
 with r3: st.markdown(f"<div class='rocker-box' style='background:#f8f9fa;'><h2 style='color:#333; margin:0;'>{bulls+bears} Scanned</h2><small>Market Rockers Live</small></div>", unsafe_allow_html=True)
 
 st.markdown("<br>", unsafe_allow_html=True)
 
-# 3. Body
-c_l, c_r = st.columns([1, 2.5])
+# 3. Index Mover & Contributors Section
+col_left, col_right = st.columns([1.5, 1])
 
-with c_l:
-    st.subheader("Market Breadth") #
+with col_left:
+    st.subheader("📊 Index Mover (Nifty)")
     if (bulls+bears) > 0:
-        fig = go.Figure(data=[go.Pie(labels=['Bulls', 'Bears'], values=[bulls, bears], hole=.7, marker_colors=['#2ecc71', '#e74c3c'])])
-        fig.update_layout(showlegend=False, height=220, margin=dict(t=0,b=0,l=0,r=0), paper_bgcolor='rgba(0,0,0,0)')
+        fig = go.Figure(data=[go.Pie(labels=['Gainers', 'Losers'], values=[bulls, bears], hole=.7, marker_colors=['#2ecc71', '#e74c3c'])])
+        fig.update_layout(showlegend=False, height=350, margin=dict(t=0,b=0,l=0,r=0), paper_bgcolor='rgba(0,0,0,0)')
         st.plotly_chart(fig, use_container_width=True)
-    
-    # Swing Spectrum Card
-    st.markdown("<div class='swing-card'><b>Swing Spectrum</b><br><small style='color:#888'>Find BO & Reversal Stocks</small><hr style='margin:10px 0;'>✔️ Active Scanners Loaded</div>", unsafe_allow_html=True)
 
-with c_r:
-    st.subheader("🔥 Tradex Power Signals") #
-    if sig_res:
-        for s in sig_res:
-            st.write(f"**{s['S']}** &nbsp; ✔️ {s['L']}")
-    else: st.info("Scanning Swing Spectrum... No high probability reversals yet.")
+with col_right:
+    st.subheader("Top Contributors")
+    for c in contributors:
+        border_col = c['col']
+        st.markdown(f"""
+            <div class='contributor-item' style='border-left-color:{border_col};'>
+                <span><b>{c['name']}</b></span>
+                <span style='color:{c['col']}; font-weight:bold;'>{'+' if c['chg'] > 0 else ''}{c['chg']}%</span>
+            </div>
+            """, unsafe_allow_html=True)
 
 time.sleep(60)
 st.rerun()
