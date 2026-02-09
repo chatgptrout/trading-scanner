@@ -1,94 +1,102 @@
 import streamlit as st
 import yfinance as yf
+import pandas as pd
 import plotly.graph_objects as go
 import time
 from datetime import datetime
 
-# 1. Page Config (Full View - No Deletions)
-st.set_page_config(layout="wide", page_title="Santosh Pro Terminal", initial_sidebar_state="collapsed")
+# 1. Page Config
+st.set_page_config(layout="wide", page_title="Santosh Index Mover Pro", initial_sidebar_state="collapsed")
 
-# 2. Correct Styling (Rupee Focused)
+# Professional White UI
 st.markdown("""
     <style>
-    .stApp { background-color: #f8f9fa; }
-    .live-badge {
-        background: #1a1a1a; color: #00ff00; padding: 12px 20px;
-        border-radius: 12px; font-size: 26px; font-weight: bold;
-        border: 2px solid #00ff00; float: right; font-family: 'Courier New', monospace;
-    }
-    .nagpal-card {
-        background: white; border-radius: 18px; padding: 25px;
-        box-shadow: 0 6px 20px rgba(0,0,0,0.1); margin-bottom: 30px;
-        border-left: 15px solid #f39c12;
-    }
-    .data-footer { background: #eee; padding: 20px; border-radius: 10px; margin-top: 50px; }
+    .stApp { background-color: #ffffff; color: #333; }
+    .tradex-header { background-color: #f8f9fa; padding: 15px; border-bottom: 2px solid #eee; margin-bottom: 20px; display: flex; justify-content: space-between; }
+    .index-card { background-color: #f8f9fa; border: 1px solid #eee; padding: 10px; border-radius: 8px; text-align: center; }
+    .contributor-item { display: flex; justify-content: space-between; padding: 8px; border-radius: 5px; margin-bottom: 5px; font-size: 13px; border-left: 4px solid #eee; }
+    .rocker-box { border: 1px solid #eee; padding: 15px; border-radius: 8px; text-align: center; }
     </style>
     """, unsafe_allow_html=True)
 
-# 3. Precision Price Logic
-def get_verified_rupee_price(ticker, fallback):
-    try:
-        data = yf.download(ticker, period="1d", interval="1m", progress=False)
-        if not data.empty:
-            price = data['Close'].iloc[-1]
-            return round(price, 2) if price > 10 else fallback
-        return fallback
-    except: return fallback
+# 2. Data Logic
+@st.cache_data(ttl=60)
+def fetch_master_data():
+    indices = {"NIFTY 50": "^NSEI", "BANK NIFTY": "^NSEBANK", "CRUDE OIL": "CL=F", "NAT GAS": "NG=F", "GOLD": "GC=F", "SILVER": "SI=F"}
+    # Top 10 heavyweights for Index Mover logic
+    heavyweights = ["RELIANCE", "HDFCBANK", "ICICIBANK", "INFY", "TCS", "ITC", "AXISBANK", "LT", "SBIN", "BHARTIARTL"]
+    
+    # A. Index Bar
+    idx_res = []
+    for name, sym in indices.items():
+        try:
+            d = yf.Ticker(sym).history(period="1d", interval="5m")
+            if not d.empty:
+                cmp = round(d['Close'].iloc[-1], 2)
+                prev = d['Close'].iloc[-2]
+                col = "#2ecc71" if cmp > prev else "#e74c3c"
+                idx_res.append({"name": name, "cmp": cmp, "col": col})
+        except: continue
 
-# --- MAIN INTERFACE ---
-st.markdown(f"### 🛡️ SANTOSH MASTER TERMINAL | LIVE STATUS: {datetime.now().strftime('%H:%M:%S')}")
+    # B. Contributors & Rockers
+    tickers = [t + ".NS" for t in heavyweights]
+    raw = yf.download(tickers, period="2d", interval="5m", group_by='ticker', progress=False)
+    
+    contributors, bulls, bears = [], 0, 0
+    for t in heavyweights:
+        try:
+            df = raw[t + ".NS"].dropna()
+            if df.empty: continue
+            cmp = df['Close'].iloc[-1]
+            chg = round(((cmp - df['Close'].iloc[-2]) / df['Close'].iloc[-2]) * 100, 2)
+            if chg > 0: bulls += 1
+            else: bears += 1
+            contributors.append({"name": t, "chg": chg, "col": "#2ecc71" if chg > 0 else "#e74c3c"})
+        except: continue
+    
+    return idx_res, sorted(contributors, key=lambda x: x['chg'], reverse=True), bulls, bears
 
-# A. NATURAL GAS SECTION (Tikh se!)
-ng_p = get_verified_rupee_price("NATURALGAS25FEBFUT.NS", 160.50)
-st.markdown(f"""
-    <div class='nagpal-card'>
-        <div class='live-badge'>₹{ng_p}</div>
-        <div style='color:#f39c12; font-weight:bold; font-size:18px;'>⭐ Commodity Recommendation</div>
-        <h1 style='margin:10px 0;'>BUY NATURALGAS 25FEB</h1>
-        <div style='background:#f1f3f5; padding:15px; border-radius:8px; font-size:20px; font-weight:bold;'>
-            ENTRY: ABOVE ₹158.50
-        </div>
-        <div style='margin-top:20px; font-size:22px;'>
-            <span style='color:#e74c3c; font-weight:bold;'>SL: 152</span> | 
-            <span style='color:#2ecc71; font-weight:bold;'>TGT: 175</span>
-        </div>
-    </div>
-    """, unsafe_allow_html=True)
+# --- DISPLAY ---
+idx_res, contributors, bulls, bears = fetch_master_data()
 
-# B. CRUDE OIL SECTION
-crude_p = get_verified_rupee_price("CRUDEOIL25FEB5700CE.NS", 256.40)
-st.markdown(f"""
-    <div class='nagpal-card' style='border-left-color: #e67e22;'>
-        <div class='live-badge'>₹{crude_p}</div>
-        <div style='color:#e67e22; font-weight:bold; font-size:18px;'>⭐ Commodity Special Call</div>
-        <h1 style='margin:10px 0;'>BUY CRUDEOILM 17FEB 5700 CE</h1>
-        <div style='background:#f1f3f5; padding:15px; border-radius:8px; font-size:20px; font-weight:bold;'>
-            ENTRY: ABOVE ₹195-200
-        </div>
-        <div style='margin-top:20px; font-size:22px;'>
-            <span style='color:#e74c3c; font-weight:bold;'>SL: 163</span> | 
-            <span style='color:#2ecc71; font-weight:bold;'>TGT: 240</span>
-        </div>
-    </div>
-    """, unsafe_allow_html=True)
+st.markdown(f"<div class='tradex-header'><div><b>TRADEX</b> <span style='background:#ff4b4b; color:white; padding:2px 8px; border-radius:4px;'>LIVE</span></div><div>{datetime.now().strftime('%H:%M:%S')}</div></div>", unsafe_allow_html=True)
 
-st.markdown("<br><hr><br>", unsafe_allow_html=True)
+# 1. RESTORED Index Bar
+i_cols = st.columns(len(idx_res))
+for i, x in enumerate(idx_res):
+    with i_cols[i]:
+        st.markdown(f"<div class='index-card'><small style='color:#888'>{x['name']}</small><h4 style='color:{x['col']}; margin:0'>{x['cmp']}</h4></div>", unsafe_allow_html=True)
 
-# C. PURANA DATA (Kuch bhi delete nahi hua!)
-st.subheader("📊 Purana Dashboard (Safe & Sound)")
-col_l, col_r = st.columns(2)
-with col_l:
-    st.write("#### Market Mood Check")
-    fig = go.Figure(data=[go.Pie(labels=['Bulls', 'Bears'], values=[7.5, 2.5], hole=.7, marker_colors=['#2ecc71', '#e74c3c'])])
-    fig.update_layout(showlegend=False, height=250, margin=dict(t=0,b=0,l=0,r=0))
-    st.plotly_chart(fig, use_container_width=True)
+st.markdown("---")
 
-with col_r:
-    st.write("#### Global Indices Bar")
-    st.write("NIFTY 50: 22450.10")
-    st.write("BANK NIFTY: 47812.45")
-    st.write("GOLD (MCX): 50405.00")
-    st.info("Quick Logic: Stock aur Option cards kal subah 9:15 baje upar automatic add ho jayenge.")
+# 2. Market Rockers
+r1, r2, r3 = st.columns(3)
+with r1: st.markdown(f"<div class='rocker-box' style='background:#f1f8f6;'><h2 style='color:#198754; margin:0;'>{bulls} Up</h2><small>Bullish Sentiment</small></div>", unsafe_allow_html=True)
+with r2: st.markdown(f"<div class='rocker-box' style='background:#fff5f5;'><h2 style='color:#dc3545; margin:0;'>{bears} Down</h2><small>Bearish Pressure</small></div>", unsafe_allow_html=True)
+with r3: st.markdown(f"<div class='rocker-box' style='background:#f8f9fa;'><h2 style='color:#333; margin:0;'>{bulls+bears} Scanned</h2><small>Market Rockers Live</small></div>", unsafe_allow_html=True)
 
-time.sleep(10)
+st.markdown("<br>", unsafe_allow_html=True)
+
+# 3. Index Mover & Contributors Section
+col_left, col_right = st.columns([1.5, 1])
+
+with col_left:
+    st.subheader("📊 Index Mover (Nifty)")
+    if (bulls+bears) > 0:
+        fig = go.Figure(data=[go.Pie(labels=['Gainers', 'Losers'], values=[bulls, bears], hole=.7, marker_colors=['#2ecc71', '#e74c3c'])])
+        fig.update_layout(showlegend=False, height=350, margin=dict(t=0,b=0,l=0,r=0), paper_bgcolor='rgba(0,0,0,0)')
+        st.plotly_chart(fig, use_container_width=True)
+
+with col_right:
+    st.subheader("Top Contributors")
+    for c in contributors:
+        border_col = c['col']
+        st.markdown(f"""
+            <div class='contributor-item' style='border-left-color:{border_col};'>
+                <span><b>{c['name']}</b></span>
+                <span style='color:{c['col']}; font-weight:bold;'>{'+' if c['chg'] > 0 else ''}{c['chg']}%</span>
+            </div>
+            """, unsafe_allow_html=True)
+
+time.sleep(60)
 st.rerun()
