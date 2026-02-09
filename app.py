@@ -6,78 +6,75 @@ import time
 from datetime import datetime
 
 # 1. Page Config
-st.set_page_config(layout="wide", page_title="Santosh Ultimate Signal", initial_sidebar_state="collapsed")
+st.set_page_config(layout="wide", page_title="Santosh All-Market Terminal", initial_sidebar_state="collapsed")
 
 # Professional UI Styling
 st.markdown("""
     <style>
     .stApp { background-color: #ffffff; }
-    .call-box {
-        border-radius: 15px; padding: 20px; margin-bottom: 20px;
-        box-shadow: 0 4px 10px rgba(0,0,0,0.1); text-align: center;
-    }
+    .call-box { border-radius: 12px; padding: 15px; margin-bottom: 15px; text-align: center; box-shadow: 0 4px 10px rgba(0,0,0,0.05); }
     .stock-box { background-color: #f1f8f6; border: 2px solid #2ecc71; }
     .option-box { background-color: #f0f7ff; border: 2px solid #1c92d2; }
-    .label { font-size: 14px; color: #666; font-weight: bold; }
-    .value { font-size: 20px; font-weight: bold; color: #333; }
-    .buy-btn { background: #2ecc71; color: white; padding: 2px 10px; border-radius: 5px; font-weight: bold; }
+    .commodity-box { background-color: #fffaf0; border: 2px solid #f39c12; }
+    .label { font-size: 13px; color: #666; font-weight: bold; }
+    .value { font-size: 18px; font-weight: bold; color: #333; }
+    .header-tag { color: white; padding: 2px 8px; border-radius: 4px; font-weight: bold; font-size: 12px; margin-bottom: 10px; display: inline-block; }
     </style>
     """, unsafe_allow_html=True)
 
-# 2. Logic for Both Calls
-def get_master_calls():
-    # A. Stock Cash Call
-    stock_p = 22700.0  # Powerindia Example
-    # B. Option Premium Call
-    opt_p = 760.0      # Premium Price Example
-    
+# 2. Logic for All Markets
+def get_all_calls():
+    # Example Levels
     return {
         "stock": {"name": "POWERINDIA", "entry": 22745, "sl": 22350, "tgt": 23050},
-        "option": {"name": "POWERINDIA 22500 CE", "entry": 780, "sl": 600, "tgt": 950}
+        "option": {"name": "POWERINDIA 22500 CE", "entry": 780, "sl": 600, "tgt": 950},
+        "commodity": {"name": "CRUDE OIL", "entry": 63.50, "sl": 62.10, "tgt": 65.00} #
     }
 
-# --- DISPLAY ---
-calls = get_master_calls()
+# --- DISPLAY ENGINE ---
+calls = get_all_calls()
 
-# A. TOP SECTION: CLEAR CALLS
-st.markdown("### 🚀 Live Trading Signals (Stock + Option)")
-c_stock, c_opt = st.columns(2)
+# Header
+st.markdown(f"### 🚀 SANTOSH MASTER SIGNALS | {datetime.now().strftime('%H:%M:%S')}")
 
-with c_stock:
-    st.markdown(f"""
-        <div class='call-box stock-box'>
-            <div class='buy-btn'>STOCK CASH</div>
-            <div style='font-size:22px; font-weight:bold; margin:10px 0;'>BUY {calls['stock']['name']}</div>
-            <div class='label'>ENTRY ABOVE: <span class='value'>₹{calls['stock']['entry']}</span></div>
-            <div class='label'>STOP LOSS: <span class='value' style='color:#e74c3c;'>₹{calls['stock']['sl']}</span></div>
-            <div class='label'>TARGET: <span class='value' style='color:#2ecc71;'>₹{calls['stock']['tgt']}</span></div>
-        </div>
-        """, unsafe_allow_html=True)
+# A. EQUITY & OPTIONS SECTION
+col1, col2 = st.columns(2)
+with col1:
+    st.markdown(f"<div class='call-box stock-box'><span class='header-tag' style='background:#2ecc71;'>STOCK CASH</span><br><b>BUY {calls['stock']['name']}</b><br><span class='label'>ABOVE:</span> <span class='value'>{calls['stock']['entry']}</span><br><span class='label'>SL:</span> <span class='value' style='color:#e74c3c;'>{calls['stock']['sl']}</span> | <span class='label'>TGT:</span> <span class='value' style='color:#2ecc71;'>{calls['stock']['tgt']}</span></div>", unsafe_allow_html=True)
 
-with c_opt:
-    st.markdown(f"""
-        <div class='call-box option-box'>
-            <div class='buy-btn' style='background:#1c92d2;'>OPTION PREMIUM</div>
-            <div style='font-size:22px; font-weight:bold; margin:10px 0;'>BUY {calls['option']['name']}</div>
-            <div class='label'>ENTRY ABOVE: <span class='value'>₹{calls['option']['entry']}</span></div>
-            <div class='label'>STOP LOSS: <span class='value' style='color:#e74c3c;'>₹{calls['option']['sl']}</span></div>
-            <div class='label'>TARGET: <span class='value' style='color:#2ecc71;'>₹{calls['option']['tgt']}</span></div>
-        </div>
-        """, unsafe_allow_html=True)
+with col2:
+    st.markdown(f"<div class='call-box option-box'><span class='header-tag' style='background:#1c92d2;'>OPTION PREMIUM</span><br><b>BUY {calls['option']['name']}</b><br><span class='label'>ABOVE:</span> <span class='value'>{calls['option']['entry']}</span><br><span class='label'>SL:</span> <span class='value' style='color:#e74c3c;'>{calls['option']['sl']}</span> | <span class='label'>TGT:</span> <span class='value' style='color:#2ecc71;'>{calls['option']['tgt']}</span></div>", unsafe_allow_html=True)
 
+# B. COMMODITY SECTION (NEW)
 st.markdown("---")
+st.subheader("🔥 Live Commodity Signals")
+c_comm = st.columns(1)[0]
+with c_comm:
+    st.markdown(f"""
+        <div class='call-box commodity-box'>
+            <span class='header-tag' style='background:#f39c12;'>COMMODITY (CRUDE/GOLD/SILVER)</span>
+            <div style='font-size:22px; font-weight:bold; margin:10px 0;'>BUY {calls['commodity']['name']}</div>
+            <div style='display:flex; justify-content:center; gap:20px;'>
+                <div><span class='label'>ENTRY ABOVE:</span> <span class='value'>${calls['commodity']['entry']}</span></div>
+                <div><span class='label'>STOP LOSS:</span> <span class='value' style='color:#e74c3c;'>${calls['commodity']['sl']}</span></div>
+                <div><span class='label'>TARGET:</span> <span class='value' style='color:#2ecc71;'>${calls['commodity']['tgt']}</span></div>
+            </div>
+            <small style='color:#888; margin-top:10px; display:block;'>Commodity Market is LIVE until 11:30 PM ✔️</small>
+        </div>
+        """, unsafe_allow_html=True)
 
-# B. BOTTOM SECTION: OLD DASHBOARD (RESTORED)
-st.subheader("📊 Market Sentiment")
+# C. PURANA DATA (Back-up)
+st.markdown("---")
 col_l, col_r = st.columns([1, 1])
 with col_l:
-    st.write("### Market Mood: 6 Up | 2 Down")
-    fig = go.Figure(data=[go.Pie(labels=['Bulls', 'Bears'], values=[6, 2], hole=.7, marker_colors=['#2ecc71', '#e74c3c'])])
-    fig.update_layout(showlegend=False, height=250, margin=dict(t=0,b=0,l=0,r=0))
+    st.write("### Market Mood & Rockers") #
+    fig = go.Figure(data=[go.Pie(labels=['Up', 'Down'], values=[6, 4], hole=.7, marker_colors=['#2ecc71', '#e74c3c'])])
+    fig.update_layout(showlegend=False, height=200, margin=dict(t=0,b=0,l=0,r=0))
     st.plotly_chart(fig, use_container_width=True)
 
 with col_r:
-    st.write("**Quick Check:** Sabse upar Stock aur Option dono ki clear levels hain. Pehle Stock level check karein, fir Option premium mein entry lein.")
+    st.write("**Top Indices Bar (Live):**")
+    st.write("CRUDE OIL: 62.94 | GOLD: 5039.4 | SILVER: 81.5") #
 
 time.sleep(60)
 st.rerun()
