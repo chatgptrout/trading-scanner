@@ -5,85 +5,122 @@ import plotly.graph_objects as go
 import time
 from datetime import datetime
 
-# 1. Page Config
-st.set_page_config(layout="wide", page_title="Santosh Triple Terminal", initial_sidebar_state="collapsed")
+# 1. Page Configuration
+st.set_page_config(layout="wide", page_title="Santosh Tradex Live", initial_sidebar_state="collapsed")
 
-# Professional UI Styling (Nagpal Style for all)
+# Professional UI Styling (Based on your images)
 st.markdown("""
     <style>
-    .stApp { background-color: #ffffff; }
+    .stApp { background-color: #f4f7f6; color: #333; }
+    .index-card { background-color: #ffffff; border: 1px solid #ddd; padding: 10px; border-radius: 8px; text-align: center; box-shadow: 0 2px 4px rgba(0,0,0,0.05); }
     .nagpal-card {
-        background-color: #ffffff; border-radius: 12px; padding: 20px;
-        box-shadow: 0 4px 12px rgba(0,0,0,0.1); margin-bottom: 20px;
-        border-left: 10px solid #2ecc71;
+        background-color: #ffffff; border-radius: 15px; padding: 20px;
+        box-shadow: 0 8px 16px rgba(0,0,0,0.1); margin-bottom: 25px;
+        border-left: 12px solid #2ecc71;
     }
     .stock-card { border-left-color: #2ecc71; }
     .option-card { border-left-color: #1c92d2; }
     .comm-card { border-left-color: #f39c12; }
-    .tgt-text { color: #2ecc71; font-weight: bold; }
-    .sl-text { color: #e74c3c; font-weight: bold; }
+    .call-label { font-size: 14px; font-weight: bold; color: #888; text-transform: uppercase; }
+    .strike-title { font-size: 24px; font-weight: bold; margin: 10px 0; color: #222; }
+    .entry-box { background: #f9f9f9; padding: 10px; border-radius: 8px; border: 1px dashed #ccc; font-size: 18px; font-weight: bold; display: inline-block; }
+    .tgt-text { color: #2ecc71; font-weight: bold; font-size: 20px; }
+    .sl-text { color: #e74c3c; font-weight: bold; font-size: 20px; }
     </style>
     """, unsafe_allow_html=True)
 
-# 2. Logic for Triple Calls
-def get_all_market_calls():
-    return {
-        "stock": {"name": "POWERINDIA", "type": "Cash-Buy", "entry": "22745", "tgt": "23050", "sl": "22350"},
-        "option": {"name": "NIFTY 22500 CE", "type": "Option-Buy", "entry": "145 - 150", "tgt": "210", "sl": "110"},
-        "commodity": {"name": "CRUDEOILM 17FEB 5700 CE", "type": "Comm-Buy", "entry": "190 - 192", "tgt": "233", "sl": "163"}
+# 2. Advanced Data Logic
+@st.cache_data(ttl=60)
+def fetch_all_market_signals():
+    # Indices Data
+    indices = {"NIFTY 50": "^NSEI", "BANK NIFTY": "^NSEBANK", "CRUDE OIL": "CL=F", "GOLD": "GC=F", "SILVER": "SI=F"}
+    idx_data = []
+    for name, sym in indices.items():
+        try:
+            d = yf.Ticker(sym).history(period="1d", interval="5m")
+            if not d.empty:
+                idx_data.append({"name": name, "cmp": round(d['Close'].iloc[-1], 2)})
+        except: continue
+
+    # Mock signals following Mausam Nagpal patterns
+    calls = {
+        "stock": {"name": "POWERINDIA", "entry": "22780", "sl": "22350", "tgt": "23200"},
+        "option": {"name": "NIFTY 22500 CE", "entry": "148", "sl": "115", "tgt": "220"},
+        "commodity": {"name": "CRUDEOILM 17FEB 5700 CE", "entry": "195 - 200", "sl": "163", "tgt": "240"}
     }
+    return idx_data, calls
 
 # --- DISPLAY ENGINE ---
-calls = get_all_market_calls()
+idx_res, calls = fetch_all_market_signals()
 
-# A. TOP: INDICES BAR (Restored)
-st.markdown(f"### 🚀 SANTOSH ALL-IN-ONE | {datetime.now().strftime('%H:%M:%S')}")
-st.write("NIFTY: 22450 | BANKNIFTY: 47800 | CRUDE: 63.50 | GOLD: 5040")
+# Header Section
+st.markdown(f"### 🛡️ SANTOSH TRADEX LIVE | {datetime.now().strftime('%H:%M:%S')}")
+
+# 1. TOP BAR: LIVE INDICES
+i_cols = st.columns(len(idx_res))
+for i, x in enumerate(idx_res):
+    with i_cols[i]:
+        st.markdown(f"<div class='index-card'><small>{x['name']}</small><h4 style='margin:0;'>{x['cmp']}</h4></div>", unsafe_allow_html=True)
 
 st.markdown("---")
 
-# B. MIDDLE: TRIPLE CALLS (Upar se Niche)
+# 2. MAIN TRIPLE TOWER CALLS (Upar se Niche)
 st.subheader("📢 Live Pro-Signals (All Markets)")
 
-# 1. STOCK CALL
+# A. STOCK CASH CALL
 st.markdown(f"""
     <div class='nagpal-card stock-card'>
-        <div style='color:#2ecc71; font-weight:bold;'>⭐ STOCK CASH CALL ⭐</div>
-        <div style='font-size:20px; font-weight:bold;'>📈 {calls['stock']['name']} ({calls['stock']['type']})</div>
-        <b>Entry:</b> ₹ {calls['stock']['entry']} | <span class='tgt-text'>Tgt: {calls['stock']['tgt']}</span> | <span class='sl-text'>SL: {calls['stock']['sl']}</span>
+        <div class='call-label'>⭐ Stock Cash Call</div>
+        <div class='strike-title'>🚀 BUY {calls['stock']['name']}</div>
+        <div class='entry-box'>ENTRY ABOVE: ₹{calls['stock']['entry']}</div>
+        <div style='margin-top:15px;'>
+            <span class='sl-text'>🛑 STOP LOSS: {calls['stock']['sl']}</span> | 
+            <span class='tgt-text'>🎯 TARGET: {calls['stock']['tgt']}</span>
+        </div>
     </div>
     """, unsafe_allow_html=True)
 
-# 2. OPTION CALL
+# B. OPTION PREMIUM CALL
 st.markdown(f"""
     <div class='nagpal-card option-card'>
-        <div style='color:#1c92d2; font-weight:bold;'>⭐ OPTION PREMIUM CALL ⭐</div>
-        <div style='font-size:20px; font-weight:bold;'>📈 {calls['option']['name']} ({calls['option']['type']})</div>
-        <b>Entry:</b> ₹ {calls['option']['entry']} | <span class='tgt-text'>Tgt: {calls['option']['tgt']}</span> | <span class='sl-text'>SL: {calls['option']['sl']}</span>
+        <div class='call-label' style='color:#1c92d2;'>⭐ Option Premium Call</div>
+        <div class='strike-title' style='color:#1c92d2;'>🚀 BUY {calls['option']['name']}</div>
+        <div class='entry-box'>ENTRY ABOVE: ₹{calls['option']['entry']}</div>
+        <div style='margin-top:15px;'>
+            <span class='sl-text'>🛑 STOP LOSS: {calls['option']['sl']}</span> | 
+            <span class='tgt-text' style='color:#1c92d2;'>🎯 TARGET: {calls['option']['tgt']}</span>
+        </div>
     </div>
     """, unsafe_allow_html=True)
 
-# 3. COMMODITY CALL
+# C. COMMODITY SPECIAL CALL
 st.markdown(f"""
     <div class='nagpal-card comm-card'>
-        <div style='color:#f39c12; font-weight:bold;'>⭐ COMMODITY SPECIAL CALL ⭐</div>
-        <div style='font-size:20px; font-weight:bold;'>📈 {calls['commodity']['name']} ({calls['commodity']['type']})</div>
-        <b>Entry:</b> ₹ {calls['commodity']['entry']} | <span class='tgt-text'>Tgt: {calls['commodity']['tgt']}</span> | <span class='sl-text'>SL: {calls['commodity']['sl']}</span>
+        <div class='call-label' style='color:#f39c12;'>⭐ Commodity Special Call</div>
+        <div class='strike-title' style='color:#f39c12;'>🚀 BUY {calls['commodity']['name']}</div>
+        <div class='entry-box'>ENTRY RANGE: ₹{calls['commodity']['entry']}</div>
+        <div style='margin-top:15px;'>
+            <span class='sl-text'>🛑 STOP LOSS: {calls['commodity']['sl']}</span> | 
+            <span class='tgt-text' style='color:#f39c12;'>🎯 TARGET: {calls['commodity']['tgt']}</span>
+        </div>
+        <hr>
+        <small style='color:#888;'>Commodity Market is LIVE till 11:30 PM ✔️</small>
     </div>
     """, unsafe_allow_html=True)
 
 st.markdown("---")
 
-# C. BOTTOM: SENTIMENT & PIE CHART (Restored)
+# 3. BOTTOM: MARKET MOOD (RESTORED)
+st.subheader("📊 Market Sentiment")
 col_l, col_r = st.columns(2)
 with col_l:
-    st.write("#### Market Mood Meter")
     fig = go.Figure(data=[go.Pie(labels=['Bullish', 'Bearish'], values=[7, 3], hole=.7, marker_colors=['#2ecc71', '#e74c3c'])])
-    fig.update_layout(showlegend=False, height=200, margin=dict(t=0,b=0,l=0,r=0))
+    fig.update_layout(showlegend=False, height=200, margin=dict(t=0,b=0,l=0,r=0), paper_bgcolor='rgba(0,0,0,0)')
     st.plotly_chart(fig, use_container_width=True)
 
 with col_r:
-    st.write("**Quick Logic:** Teeno markets ke best calls ab aapke samne line se hain. Nifty band hone ke baad bhi Commodity call raat tak chalta rahega.")
+    st.write("**Top Contributors:**")
+    st.write("RELIANCE: +0.12% | TCS: +0.1% | HDFCBANK: +0.08%")
 
-time.sleep(60)
+time.sleep(10) # Fast refresh for live market
 st.rerun()
