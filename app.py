@@ -1,65 +1,72 @@
 import streamlit as st
+import plotly.graph_objects as go
 import pytz
 from datetime import datetime
-import time
 
-# Force IST for Live Commodity Trading
-IST = pytz.timezone('Asia/Kolkata')
-current_time = datetime.now(IST).strftime('%H:%M:%S')
+# Page Setup
+st.set_page_config(page_title="SANTOSH ULTIMATE TRADER", layout="wide")
 
-st.set_page_config(page_title="SANTOSH TRADER PRO", layout="wide")
-
-# Pro-Trader Theme (Gold & Dark)
-st.markdown(f"""
+# Custom CSS for Neo-Look
+st.markdown("""
     <style>
-    .live-clock {{ background-color: #1a1a1a; color: #00ff00; padding: 10px; border-radius: 8px; font-family: monospace; font-size: 24px; text-align: center; border: 2px solid #333; }}
-    .mcx-card {{ background: #111; border: 2px solid #d4af37; padding: 20px; border-radius: 12px; text-align: center; }}
-    .price-up {{ color: #00ff00; font-size: 28px; font-weight: bold; }}
-    .price-down {{ color: #ff3131; font-size: 28px; font-weight: bold; }}
+    .stApp { background-color: #f4f7f9; }
+    .header-box { background: white; padding: 10px; border-bottom: 2px solid #00a8e8; margin-bottom: 20px; }
+    .signal-btn { padding: 10px; border-radius: 5px; text-align: center; font-weight: bold; color: white; }
     </style>
     """, unsafe_allow_html=True)
 
-# --- HEADER ---
-t1, t2 = st.columns([3, 1])
-with t1:
-    st.title("🔥 MCX LIVE TERMINAL (Santosh Pro)")
-with t2:
-    st.markdown(f"<div class='live-clock'>⏰ {current_time}</div>", unsafe_allow_html=True)
+# --- HEADER (Clock & Title) ---
+IST = pytz.timezone('Asia/Kolkata')
+curr_time = datetime.now(IST).strftime('%H:%M:%S')
 
-# --- LIVE COMMODITY WATCH ---
-st.subheader("💰 Active Commodity Markets")
-m1, m2, m3 = st.columns(3)
+with st.container():
+    c1, c2 = st.columns([4,1])
+    c1.title("🚀 SANTOSH ULTIMATE TRADER")
+    c2.markdown(f"### ⏰ {curr_time}")
 
-with m1:
-    st.markdown("""<div class='mcx-card'>
-        <b style='color:#d4af37;'>CRUDE OIL (FEB)</b><br>
-        <span class='price-down'>₹5,812.00</span><br>
-        <small style='color:#ff3131;'>▼ -0.99%</small>
-    </div>""", unsafe_allow_html=True)
+# --- QUICK SIGNALS (Neo Style) ---
+s1, s2, s3, s4 = st.columns(4)
+s1.markdown("<div class='signal-btn' style='background:#2ecc71;'>WELL SET BUY</div>", unsafe_allow_html=True)
+s2.markdown("<div class='signal-btn' style='background:#27ae60;'>WELL SET BUY</div>", unsafe_allow_html=True)
+s3.markdown("<div class='signal-btn' style='background:#e74c3c;'>WELL SET BEAR</div>", unsafe_allow_html=True)
+s4.markdown("<div class='signal-btn' style='background:#3498db;'>TAKING GUARD BULL</div>", unsafe_allow_html=True)
 
-with m2:
-    st.markdown("""<div class='mcx-card'>
-        <b style='color:#d4af37;'>NATURAL GAS</b><br>
-        <span class='price-down'>₹279.30</span><br>
-        <small style='color:#ff3131;'>▼ -2.85%</small>
-    </div>""", unsafe_allow_html=True)
-
-with m3:
-    st.markdown("""<div class='mcx-card'>
-        <b style='color:#d4af37;'>GOLD (APR)</b><br>
-        <span class='price-up'>₹72,480.00</span><br>
-        <small style='color:#00ff00;'>▲ +0.12%</small>
-    </div>""", unsafe_allow_html=True)
-
-# --- LIVE SCALPING RADAR ---
 st.markdown("---")
-st.subheader("🚀 Scalping Signals (5-Min Chart)")
-col_s1, col_s2 = st.columns(2)
 
-with col_s1:
-    st.error("📉 **CRUDE OIL:** Lower-Low pattern. 5800 is a crucial support. Agar break hua toh 5740 tak slip ho sakta hai.")
-with col_s2:
-    st.success("📈 **GOLD:** VIP Signal: 72400-72450 is a strong buying zone for 72600 target. SL 72350.")
+# --- MAIN DASHBOARD LAYOUT ---
+col_left, col_mid, col_right = st.columns([1.5, 1.5, 1])
 
-time.sleep(1)
-st.rerun()
+with col_left:
+    st.subheader("📊 Broad Market Indices")
+    # Horizontal Bar Chart for Indices
+    fig_idx = go.Figure(go.Bar(
+        x=[25935, 60626, 25000, 15000],
+        y=['NIFTY', 'BANKNIFTY', 'MIDCAP 100', 'SMLCAP 100'],
+        orientation='h', marker_color='#ff3131'
+    ))
+    fig_idx.update_layout(height=300, margin=dict(l=10, r=10, t=10, b=10))
+    st.plotly_chart(fig_idx, use_container_width=True)
+
+with col_mid:
+    st.subheader("🏗️ Sector Performance")
+    sectors = ['NIFTY AUTO', 'NIFTY FMCG', 'NIFTY PSU BANK', 'NIFTY REALTY']
+    vals = [80, 45, 90, 30]
+    fig_sec = go.Figure(go.Bar(x=vals, y=sectors, orientation='h', marker_color='#4f46e5'))
+    fig_sec.update_layout(height=300, margin=dict(l=10, r=10, t=10, b=10))
+    st.plotly_chart(fig_sec, use_container_width=True)
+
+with col_right:
+    st.subheader("🔴 Advance/Decline")
+    fig_pie = go.Figure(data=[go.Pie(labels=['Adv', 'Dec', 'Neut'], values=[1200, 800, 200], hole=.6, marker_colors=['#2ecc71', '#e74c3c', '#95a5a6'])])
+    fig_pie.update_layout(height=300, margin=dict(l=10, r=10, t=10, b=10), showlegend=False)
+    st.plotly_chart(fig_pie, use_container_width=True)
+
+# --- MCX COMMODITY (KEEPING IT ALIVE) ---
+st.markdown("---")
+st.subheader("🔥 MCX Commodity Live")
+mcx1, mcx2, mcx3 = st.columns(3)
+mcx1.metric("CRUDE OIL", "5,812", "-0.99%")
+mcx2.metric("NATURAL GAS", "279.30", "-2.85%")
+mcx3.metric("GOLD", "72,450", "+0.12%")
+
+st.button("🔄 REFRESH TERMINAL")
