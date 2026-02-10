@@ -13,9 +13,6 @@ curr_time = datetime.now(IST).strftime('%H:%M:%S')
 st.markdown(f"""
     <style>
     .stApp {{ background-color: #f4f7f9; }}
-    .alert-btn {{ background: #ff3131; color: white; padding: 10px; border-radius: 8px; text-align: center; font-weight: bold; animation: blinker 1.5s linear infinite; }}
-    @keyframes blinker {{ 50% {{ opacity: 0; }} }}
-    .pnl-box {{ background: white; border: 2px solid #4f46e5; padding: 15px; border-radius: 10px; text-align: center; }}
     .stock-card {{ background: white; border-top: 5px solid #2ecc71; padding: 15px; border-radius: 8px; box-shadow: 0 4px 8px rgba(0,0,0,0.1); text-align: center; }}
     .clock-box {{ background: #1a1a1a; color: #00ff00; padding: 10px; border-radius: 8px; text-align: center; font-family: monospace; font-size: 22px; border: 1px solid #333; }}
     
@@ -26,25 +23,16 @@ st.markdown(f"""
     </style>
     """, unsafe_allow_html=True)
 
-# --- 1. HEADER & CLOCK (PURANA) ---
+# --- 1. HEADER & CLOCK (KEEPING IT) ---
 h1, h2 = st.columns([3, 1])
 with h1:
     st.title("🚀 SANTOSH ULTIMATE TRADER")
 with h2:
     st.markdown(f"<div class='clock-box'>⏰ {curr_time}</div>", unsafe_allow_html=True)
 
-# --- 2. ALERT & P&L TRACKER ---
-st.markdown("<div class='alert-btn'>⚠️ NAGPAL STRATEGY ALERT: BSE BREAKOUT CONFIRMED @ 3150</div>", unsafe_allow_html=True)
-st.write("")
-p1, p2 = st.columns(2)
-with p1:
-    st.markdown("<div class='pnl-box'><b>TODAY'S REALIZED P&L</b><br><span style='font-size:24px; color:#2ecc71;'>+ ₹12,450.00</span></div>", unsafe_allow_html=True)
-with p2:
-    st.markdown("<div class='pnl-box'><b>ACTIVE MARGIN USED</b><br><span style='font-size:24px; color:#4f46e5;'>₹45,000.00</span></div>", unsafe_allow_html=True)
+# --- SECTION REMOVED (ALERT & P&L TRACKER REMOVED AS REQUESTED) ---
 
-st.divider()
-
-# --- 3. VIP WATCHLIST (PURANA) ---
+# --- 2. VIP WATCHLIST (STARTING DIRECTLY HERE) ---
 st.write("### ⭐ VIP Watchlist")
 v1, v2, v3, v4, v5 = st.columns(5)
 with v1: st.markdown("<div class='stock-card'><b>BSE LTD</b><br><span style='color:green;'>WELL SET BUY</span><br>LTP: 3185</div>", unsafe_allow_html=True)
@@ -55,7 +43,7 @@ with v5: st.markdown("<div class='stock-card' style='border-top-color:#e74c3c;'>
 
 st.divider()
 
-# --- 4. % STRENGTH & ADV/DEC CHARTS (PURANA) ---
+# --- 3. % STRENGTH & ADV/DEC CHARTS (PURANA) ---
 col_l, col_r = st.columns([2, 1])
 with col_l:
     st.subheader("🏗️ Sector Strength (% Change)")
@@ -65,11 +53,11 @@ with col_l:
 
 with col_r:
     st.subheader("🔴 Market Health")
-    fig_pie = go.Figure(data=[go.Pie(labels=['Advance', 'Decline'], values=[38, 12], hole=.6, marker_colors=['#2ecc71', '#e74c3c'])])
+    fig_pie = go.Figure(data=[go.Pie(labels=['Advance', 'Decline'], values=[76, 24], hole=.6, marker_colors=['#2ecc71', '#e74c3c'])])
     fig_pie.update_layout(height=300, showlegend=False, margin=dict(l=0, r=0, t=0, b=0))
     st.plotly_chart(fig_pie, use_container_width=True)
 
-# --- 5. COMMODITY & NEWS TICKER (PURANA) ---
+# --- 4. COMMODITY & NEWS TICKER (PURANA) ---
 st.divider()
 st.subheader("💰 MCX Commodity Live Session")
 mcx1, mcx2, mcx3 = st.columns(3)
