@@ -9,7 +9,7 @@ st.set_page_config(page_title="SANTOSH ULTIMATE TRADER", layout="wide")
 IST = pytz.timezone('Asia/Kolkata')
 curr_time = datetime.now(IST).strftime('%H:%M:%S')
 
-# Professional Trading Theme with News Ticker CSS
+# Professional Trading Theme
 st.markdown(f"""
     <style>
     .stApp {{ background-color: #f4f7f9; }}
@@ -17,11 +17,6 @@ st.markdown(f"""
     @keyframes blinker {{ 50% {{ opacity: 0; }} }}
     .stock-card {{ background: white; border-top: 5px solid #2ecc71; padding: 15px; border-radius: 8px; box-shadow: 0 4px 8px rgba(0,0,0,0.1); text-align: center; }}
     .clock-box {{ background: #1a1a1a; color: #00ff00; padding: 10px; border-radius: 8px; text-align: center; font-family: monospace; font-size: 22px; border: 1px solid #333; }}
-    
-    /* News Ticker Styling */
-    .ticker-wrapper {{ background: #1e1e2f; color: #d4af37; padding: 10px 0; overflow: hidden; white-space: nowrap; border-radius: 5px; margin-top: 20px; }}
-    .ticker-text {{ display: inline-block; padding-left: 100%; animation: ticker 30s linear infinite; font-weight: bold; font-size: 16px; }}
-    @keyframes ticker {{ 0% {{ transform: translate(0, 0); }} 100% {{ transform: translate(-100%, 0); }} }}
     </style>
     """, unsafe_allow_html=True)
 
@@ -32,7 +27,7 @@ with h1:
 with h2:
     st.markdown(f"<div class='clock-box'>⏰ {curr_time}</div>", unsafe_allow_html=True)
 
-# --- 2. NAGPAL STRATEGY ALERT (PURANA) ---
+# --- 2. NEW: NAGPAL STRATEGY ALERT BUTTON ---
 st.markdown("<div class='alert-btn'>⚠️ NAGPAL STRATEGY ALERT: BSE BREAKOUT CONFIRMED @ 3150</div>", unsafe_allow_html=True)
 st.divider()
 
@@ -63,4 +58,11 @@ with col_r:
 
 # --- 5. COMMODITY SECTION (PURANA RAKHA HAI) ---
 st.divider()
-st
+st.subheader("💰 MCX Commodity Live Session")
+mcx1, mcx2, mcx3 = st.columns(3)
+mcx1.metric("CRUDE OIL", "₹5,812", "-0.99%")
+mcx2.metric("NATURAL GAS", "₹279.30", "-2.85%")
+mcx3.metric("GOLD", "₹72,450", "+0.12%")
+
+time.sleep(1)
+st.rerun()
