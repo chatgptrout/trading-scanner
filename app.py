@@ -9,13 +9,19 @@ st.set_page_config(page_title="SANTOSH ULTIMATE TRADER", layout="wide")
 IST = pytz.timezone('Asia/Kolkata')
 curr_time = datetime.now(IST).strftime('%H:%M:%S')
 
-# Professional Trading Theme
+# Professional Trading Theme with News Ticker CSS
 st.markdown(f"""
     <style>
     .stApp {{ background-color: #f4f7f9; }}
-    .breakout-header {{ background: #2ecc71; color: white; padding: 10px; border-radius: 8px; text-align: center; font-weight: bold; margin-bottom: 20px; }}
+    .alert-btn {{ background: #ff3131; color: white; padding: 10px; border-radius: 8px; text-align: center; font-weight: bold; animation: blinker 1.5s linear infinite; }}
+    @keyframes blinker {{ 50% {{ opacity: 0; }} }}
     .stock-card {{ background: white; border-top: 5px solid #2ecc71; padding: 15px; border-radius: 8px; box-shadow: 0 4px 8px rgba(0,0,0,0.1); text-align: center; }}
     .clock-box {{ background: #1a1a1a; color: #00ff00; padding: 10px; border-radius: 8px; text-align: center; font-family: monospace; font-size: 22px; border: 1px solid #333; }}
+    
+    /* News Ticker Styling */
+    .ticker-wrapper {{ background: #1e1e2f; color: #d4af37; padding: 10px 0; overflow: hidden; white-space: nowrap; border-radius: 5px; margin-top: 20px; }}
+    .ticker-text {{ display: inline-block; padding-left: 100%; animation: ticker 30s linear infinite; font-weight: bold; font-size: 16px; }}
+    @keyframes ticker {{ 0% {{ transform: translate(0, 0); }} 100% {{ transform: translate(-100%, 0); }} }}
     </style>
     """, unsafe_allow_html=True)
 
@@ -26,71 +32,35 @@ with h1:
 with h2:
     st.markdown(f"<div class='clock-box'>⏰ {curr_time}</div>", unsafe_allow_html=True)
 
-# --- 2. BREAKOUT STOCK SECTION (SABSE UPAR) ---
-st.markdown("<div class='breakout-header'>🎯 LIVE BREAKOUT RADAR (NAGPAL STYLE)</div>", unsafe_allow_html=True)
-b1, b2, b3, b4 = st.columns(4)
+# --- 2. NAGPAL STRATEGY ALERT (PURANA) ---
+st.markdown("<div class='alert-btn'>⚠️ NAGPAL STRATEGY ALERT: BSE BREAKOUT CONFIRMED @ 3150</div>", unsafe_allow_html=True)
+st.divider()
 
-with b1:
-    st.markdown("""<div class='stock-card'>
-        <b style='color:#2ecc71;'>WELL SET BUY</b><br>
-        <span style='font-size:20px;'>BSE LTD</span><br>
-        LTP: 3185 | <b>+1.11%</b><br>
-        <small>Target: 3220+</small>
-    </div>""", unsafe_allow_html=True)
-
-with b2:
-    st.markdown("""<div class='stock-card'>
-        <b style='color:#2ecc71;'>WELL SET BUY</b><br>
-        <span style='font-size:20px;'>JINDAL STEL</span><br>
-        LTP: 1199 | <b>+1.44%</b><br>
-        <small>Target: 1215</small>
-    </div>""", unsafe_allow_html=True)
-
-with b3:
-    st.markdown("""<div class='stock-card' style='border-top-color:#e74c3c;'>
-        <b style='color:#e74c3c;'>WELL SET BEAR</b><br>
-        <span style='font-size:20px;'>CRUDE OIL</span><br>
-        LTP: 5812 | <b>-0.99%</b><br>
-        <small>Target: 5740</small>
-    </div>""", unsafe_allow_html=True)
-
-with b4:
-    st.markdown("""<div class='stock-card' style='border-top-color:#3498db;'>
-        <b style='color:#3498db;'>WATCHLIST</b><br>
-        <span style='font-size:20px;'>NIFTY 50</span><br>
-        LTP: 25935 | <b>+0.26%</b><br>
-        <small>Wait for 26000</small>
-    </div>""", unsafe_allow_html=True)
+# --- 3. NAGPAL VIP WATCHLIST (PURANA RAKHA HAI) ---
+st.write("### ⭐ VIP Watchlist")
+v1, v2, v3, v4, v5 = st.columns(5)
+with v1: st.markdown("<div class='stock-card'><b>BSE LTD</b><br><span style='color:green;'>WELL SET BUY</span><br>LTP: 3185</div>", unsafe_allow_html=True)
+with v2: st.markdown("<div class='stock-card'><b>JINDALSTEL</b><br><span style='color:green;'>WELL SET BUY</span><br>LTP: 1199</div>", unsafe_allow_html=True)
+with v3: st.markdown("<div class='stock-card'><b>ADANI ENT</b><br><span style='color:blue;'>WATCHING</span><br>LTP: 3158</div>", unsafe_allow_html=True)
+with v4: st.markdown("<div class='stock-card'><b>M&M</b><br><span style='color:green;'>WELL SET BUY</span><br>LTP: 2852</div>", unsafe_allow_html=True)
+with v5: st.markdown("<div class='stock-card' style='border-top-color:#e74c3c;'><b>CRUDE OIL</b><br><span style='color:red;'>WELL SET BEAR</span><br>LTP: 5812</div>", unsafe_allow_html=True)
 
 st.divider()
 
-# --- 3. UPDATED: % CHANGE CHARTS (SAMJHNE MEIN AASAN) ---
+# --- 4. % STRENGTH & ADV/DEC CHARTS (PURANA) ---
 col_l, col_r = st.columns([2, 1])
 with col_l:
-    st.subheader("🏗️ Market Strength (% Change)")
-    # Using Percentage instead of Price for scaling
-    fig = go.Figure(go.Bar(
-        x=[0.26, -0.07, 1.11, 1.44, -0.99], 
-        y=['NIFTY', 'BANKNIFTY', 'BSE', 'JINDAL', 'CRUDE'], 
-        orientation='h', 
-        marker_color=['#4f46e5', '#ff3131', '#2ecc71', '#2ecc71', '#e74c3c']
-    ))
-    fig.update_layout(height=350, margin=dict(l=0, r=0, t=0, b=0), xaxis_title="Percentage Change (%)")
+    st.subheader("🏗️ Sector Strength (% Change)")
+    fig = go.Figure(go.Bar(x=[0.26, 1.11, 1.44, 0.45, -0.99], y=['NIFTY', 'BSE', 'JINDAL', 'M&M', 'CRUDE'], orientation='h', marker_color='#4f46e5'))
+    fig.update_layout(height=300, margin=dict(l=0, r=0, t=0, b=0))
     st.plotly_chart(fig, use_container_width=True)
 
 with col_r:
-    st.subheader("🔴 Adv/Dec Health")
-    fig_pie = go.Figure(data=[go.Pie(labels=['Bulls', 'Bears'], values=[38, 12], hole=.6, marker_colors=['#2ecc71', '#e74c3c'])])
-    fig_pie.update_layout(height=350, showlegend=False, margin=dict(l=0, r=0, t=0, b=0))
+    st.subheader("🔴 Market Health")
+    fig_pie = go.Figure(data=[go.Pie(labels=['Advance', 'Decline'], values=[38, 12], hole=.6, marker_colors=['#2ecc71', '#e74c3c'])])
+    fig_pie.update_layout(height=300, showlegend=False, margin=dict(l=0, r=0, t=0, b=0))
     st.plotly_chart(fig_pie, use_container_width=True)
 
-# --- 4. COMMODITY SECTION (PURANA RAKHA HAI) ---
+# --- 5. COMMODITY SECTION (PURANA RAKHA HAI) ---
 st.divider()
-st.subheader("💰 MCX Commodity Live")
-mcx1, mcx2, mcx3 = st.columns(3)
-mcx1.metric("CRUDE OIL", "₹5,812", "-0.99%")
-mcx2.metric("NATURAL GAS", "₹279.30", "-2.85%")
-mcx3.metric("GOLD", "₹72,480", "+0.15%")
-
-time.sleep(1)
-st.rerun()
+st
