@@ -2,65 +2,72 @@ import streamlit as st
 import time
 from datetime import datetime
 
-# Page Configuration
+# Page Config
 st.set_page_config(page_title="SANTOSH TRADER PRO", layout="wide")
 
-# Custom CSS for "Deep Red & Dark" Theme (Trading Professional)
+# Theme: Deep Dark & High Contrast 
 st.markdown("""
     <style>
     .main { background-color: #0e1117; color: white; }
-    .metric-card { background-color: #1a1c23; border: 1px solid #333; padding: 15px; border-radius: 10px; text-align: center; }
-    .stButton>button { width: 100%; background-color: #ff3131; color: white; border-radius: 5px; }
-    .buy-signal { color: #00ff00; font-weight: bold; }
-    .sell-signal { color: #ff3131; font-weight: bold; }
+    .commodity-card { background: linear-gradient(135deg, #1e1e2f 0%, #111119 100%); border: 1px solid #d4af37; padding: 15px; border-radius: 10px; text-align: center; }
+    .buy-signal { color: #00ff00; font-weight: bold; font-size: 18px; }
+    .sell-signal { color: #ff3131; font-weight: bold; font-size: 18px; }
+    .price-text { font-size: 24px; font-weight: bold; color: #ffffff; }
     </style>
     """, unsafe_allow_html=True)
 
-# --- APP HEADER ---
+# --- HEADER ---
 t1, t2 = st.columns([3, 1])
 with t1:
-    st.title("🛡️ SANTOSH TRADER PRO (v1.0)")
+    st.title("🛡️ SANTOSH TRADER PRO (v1.1)")
 with t2:
     st.markdown(f"### ⏰ {datetime.now().strftime('%H:%M:%S')}")
 
-# --- SECTION 1: LIVE INDEX TRACKER ---
-st.subheader("📊 Market Sentiment")
-i1, i2, i3 = st.columns(3)
-with i1:
-    st.markdown("<div class='metric-card'><b>NIFTY 50</b><br><span style='font-size:24px;'>25,962.65</span><br><small style='color:#00ff00;'>PCR: 1.12 (Bullish)</small></div>", unsafe_allow_html=True)
-with i2:
-    st.markdown("<div class='metric-card'><b>BANK NIFTY</b><br><span style='font-size:24px;'>53,840.10</span><br><small style='color:#ff3131;'>PCR: 0.85 (Neutral)</small></div>", unsafe_allow_html=True)
-with i3:
-    st.markdown("<div class='metric-card'><b>SENSEX</b><br><span style='font-size:24px;'>85,120.45</span><br><small style='color:#00ff00;'>PCR: 1.15 (Bullish)</small></div>", unsafe_allow_html=True)
+# --- TABS: EQUITY & COMMODITY ---
+tab1, tab2 = st.tabs(["📈 Equity & Index", "🔥 MCX Commodity"])
 
-# --- SECTION 2: CHARTINK SNIPER LIST ---
-st.markdown("---")
-st.subheader("🚀 Chartink Breakout Sniper")
-st.write("Scanning Market for Rocket Signals...")
+with tab1:
+    st.subheader("Market Sentiment (NSE/BSE)")
+    # (Puran wala Nifty/BankNifty logic yahan aayega)
+    st.info("Nifty 50: 25,962.65 | Bank Nifty: 53,840.10")
 
-# Table for Breakouts
-data = [
-    {"Stock": "BSE", "Signal": "BUY", "Entry": "3150", "SL": "3110", "Target": "3200+"},
-    {"Stock": "JINDALSTEL", "Signal": "BUY", "Entry": "1180", "SL": "1165", "Target": "1220"},
-    {"Stock": "M&M", "Signal": "BUY", "Entry": "2845", "SL": "2810", "Target": "2910"}
-]
+with tab2:
+    st.subheader("💰 MCX Live Watchlist")
+    c1, c2, c3, c4 = st.columns(4)
+    
+    with c1:
+        st.markdown("""<div class='commodity-card'>
+            <b style='color:#d4af37;'>CRUDE OIL</b><br>
+            <span class='price-text'>₹6,480</span><br>
+            <span class='buy-signal'>BULLISH</span>
+        </div>""", unsafe_allow_html=True)
+    
+    with c2:
+        st.markdown("""<div class='commodity-card'>
+            <b style='color:#d4af37;'>NATURAL GAS</b><br>
+            <span class='price-text'>₹158.40</span><br>
+            <span class='sell-signal'>BEARISH</span>
+        </div>""", unsafe_allow_html=True)
+        
+    with c3:
+        st.markdown("""<div class='commodity-card'>
+            <b style='color:#d4af37;'>GOLD (10g)</b><br>
+            <span class='price-text'>₹72,450</span><br>
+            <span class='buy-signal'>SIDEWAYS</span>
+        </div>""", unsafe_allow_html=True)
+        
+    with c4:
+        st.markdown("""<div class='commodity-card'>
+            <b style='color:#d4af37;'>SILVER (1kg)</b><br>
+            <span class='price-text'>₹88,200</span><br>
+            <span class='buy-signal'>BULLISH</span>
+        </div>""", unsafe_allow_html=True)
 
-col_h1, col_h2, col_h3, col_h4, col_h5 = st.columns(5)
-col_h1.write("**STOCK**")
-col_h2.write("**SIGNAL**")
-col_h3.write("**ENTRY**")
-col_h4.write("**SL**")
-col_h5.write("**TARGET**")
-
-for s in data:
-    c1, c2, c3, c4, c5 = st.columns(5)
-    c1.write(s["Stock"])
-    c2.markdown(f"<span class='buy-signal'>{s['Signal']}</span>", unsafe_allow_html=True)
-    c3.write(s["Entry"])
-    c4.write(s["SL"])
-    c5.write(s["Target"])
+    st.markdown("---")
+    st.subheader("🚀 MCX Breakout Radar")
+    st.success("🔥 **CRUDE OIL:** Breakout above 6510 possible for Target 6600. SL 6450.")
+    st.error("⚠️ **NATURAL GAS:** Trading near support 155. Breakdown below this can lead to 148.")
 
 # --- FOOTER ---
-st.markdown("---")
-if st.button("🔄 FORCE REFRESH DATA"):
+if st.button("🔄 REFRESH ALL DATA"):
     st.rerun()
