@@ -15,23 +15,36 @@ st.markdown(f"""
     .stApp {{ background-color: #f4f7f9; }}
     .alert-btn {{ background: #ff3131; color: white; padding: 10px; border-radius: 8px; text-align: center; font-weight: bold; animation: blinker 1.5s linear infinite; }}
     @keyframes blinker {{ 50% {{ opacity: 0; }} }}
+    .pnl-box {{ background: white; border: 2px solid #4f46e5; padding: 15px; border-radius: 10px; text-align: center; }}
     .stock-card {{ background: white; border-top: 5px solid #2ecc71; padding: 15px; border-radius: 8px; box-shadow: 0 4px 8px rgba(0,0,0,0.1); text-align: center; }}
     .clock-box {{ background: #1a1a1a; color: #00ff00; padding: 10px; border-radius: 8px; text-align: center; font-family: monospace; font-size: 22px; border: 1px solid #333; }}
+    
+    /* News Ticker Styling */
+    .ticker-wrapper {{ background: #1e1e2f; color: #d4af37; padding: 10px 0; overflow: hidden; white-space: nowrap; border-radius: 5px; margin-top: 20px; }}
+    .ticker-text {{ display: inline-block; padding-left: 100%; animation: ticker 30s linear infinite; font-weight: bold; font-size: 16px; }}
+    @keyframes ticker {{ 0% {{ transform: translate(0, 0); }} 100% {{ transform: translate(-100%, 0); }} }}
     </style>
     """, unsafe_allow_html=True)
 
-# --- 1. HEADER (STILL THERE) ---
+# --- 1. HEADER & CLOCK (PURANA) ---
 h1, h2 = st.columns([3, 1])
 with h1:
     st.title("🚀 SANTOSH ULTIMATE TRADER")
 with h2:
     st.markdown(f"<div class='clock-box'>⏰ {curr_time}</div>", unsafe_allow_html=True)
 
-# --- 2. NEW: NAGPAL STRATEGY ALERT BUTTON ---
+# --- 2. ALERT & P&L TRACKER ---
 st.markdown("<div class='alert-btn'>⚠️ NAGPAL STRATEGY ALERT: BSE BREAKOUT CONFIRMED @ 3150</div>", unsafe_allow_html=True)
+st.write("")
+p1, p2 = st.columns(2)
+with p1:
+    st.markdown("<div class='pnl-box'><b>TODAY'S REALIZED P&L</b><br><span style='font-size:24px; color:#2ecc71;'>+ ₹12,450.00</span></div>", unsafe_allow_html=True)
+with p2:
+    st.markdown("<div class='pnl-box'><b>ACTIVE MARGIN USED</b><br><span style='font-size:24px; color:#4f46e5;'>₹45,000.00</span></div>", unsafe_allow_html=True)
+
 st.divider()
 
-# --- 3. NAGPAL VIP WATCHLIST (PURANA RAKHA HAI) ---
+# --- 3. VIP WATCHLIST (PURANA) ---
 st.write("### ⭐ VIP Watchlist")
 v1, v2, v3, v4, v5 = st.columns(5)
 with v1: st.markdown("<div class='stock-card'><b>BSE LTD</b><br><span style='color:green;'>WELL SET BUY</span><br>LTP: 3185</div>", unsafe_allow_html=True)
@@ -56,13 +69,21 @@ with col_r:
     fig_pie.update_layout(height=300, showlegend=False, margin=dict(l=0, r=0, t=0, b=0))
     st.plotly_chart(fig_pie, use_container_width=True)
 
-# --- 5. COMMODITY SECTION (PURANA RAKHA HAI) ---
+# --- 5. COMMODITY & NEWS TICKER (PURANA) ---
 st.divider()
 st.subheader("💰 MCX Commodity Live Session")
 mcx1, mcx2, mcx3 = st.columns(3)
 mcx1.metric("CRUDE OIL", "₹5,812", "-0.99%")
 mcx2.metric("NATURAL GAS", "₹279.30", "-2.85%")
 mcx3.metric("GOLD", "₹72,450", "+0.12%")
+
+st.markdown("""
+    <div class='ticker-wrapper'>
+        <div class='ticker-text'>
+            🚀 BREAKOUT ALERT: BSE confirms trend above 3150... 🔥 CRUDE OIL trading near crucial support 5800... 📈 NIFTY target for tomorrow: 26050... 💡 Nagpal Strategy: Focus on PSU Banks in first 15 mins... ⚠️ Keep Stoploss tight on Adani Enterprise... 
+        </div>
+    </div>
+    """, unsafe_allow_html=True)
 
 time.sleep(1)
 st.rerun()
