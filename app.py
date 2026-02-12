@@ -2,72 +2,76 @@ import streamlit as st
 import pandas as pd
 import time
 
-# --- WHITE THEME ---
-st.set_page_config(page_title="TGS SNIPER", layout="wide")
+# --- CLEAN WHITE UI ---
+st.set_page_config(page_title="SANTOSH SNIPER PRO", layout="wide")
 st.markdown("""
     <style>
-    .stApp { background-color: #ffffff; color: #1e1e1e; }
+    .stApp { background-color: #ffffff; color: #1a1a1a; }
     .sniper-card { 
-        background: #fdfdfd; border: 1px solid #eee; border-radius: 10px; 
-        padding: 15px; margin-bottom: 10px; box-shadow: 0 2px 5px rgba(0,0,0,0.05);
+        background: #ffffff; border: 1px solid #e1e4e8; border-radius: 15px; 
+        padding: 20px; margin-bottom: 20px; box-shadow: 0 4px 15px rgba(0,0,0,0.05);
+        border-top: 5px solid #28a745;
     }
-    .buy-card { border-left: 10px solid #28a745; background-color: #f0fff4; }
-    .sell-card { border-left: 10px solid #dc3545; background-color: #fff5f5; }
-    .wait-card { border-left: 10px solid #cccccc; opacity: 0.6; }
+    .sell-top { border-top-color: #dc3545; }
+    .wait-top { border-top-color: #adb5bd; opacity: 0.7; }
     </style>
     """, unsafe_allow_html=True)
 
+# Aapka correct CSV link
 CSV_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vQly4ZQG_WYmZv2s5waDvjO71iG6-W28fqoS7d8Uc_7BeKnZ-6XyXebCdmBth8JVWpm8TEmUYHtwi9f/pub?output=csv"
 
-def load_data():
+def load_live_data():
     try:
+        # Direct fresh fetch from TGS Sheet
         df = pd.read_csv(CSV_URL)
-        df.columns = df.columns.str.strip() # Column names se space hatayega
+        df.columns = df.columns.str.strip() # Spaces saaf karega
         return df
     except:
         return pd.DataFrame()
 
-st.markdown("<h2 style='text-align: center;'>🎯 TGS DASHBOARD LIVE</h2>", unsafe_allow_html=True)
+st.markdown("<h2 style='text-align: center;'>🎯 TGS DASHBOARD - LIVE TRAIL</h2>", unsafe_allow_html=True)
 
-df = load_data()
+data = load_live_data()
 
-if not df.empty:
-    # Sirf top 10 stocks dikhayega taaki screen bhari rahe
-    display_df = df.head(10)
-    
+if not data.empty:
+    # Saare stocks dikhayega taaki aapko "Empty" screen na dikhe
     col1, col2 = st.columns(2)
-    for i, (idx, row) in enumerate(display_df.iterrows()):
+    for i, (idx, row) in enumerate(data.head(12).iterrows()):
         t_col = col1 if i % 2 == 0 else col2
         
         # Signal Matching Logic
         sig = str(row['Signal Type']).strip().upper()
+        card_style = ""
+        sig_color = "#6c757d"
         
-        if sig == "POSITIONAL":
-            style = "buy-card"
-            color = "#28a745"
-        elif sig == "SHORTS":
-            style = "sell-card"
-            color = "#dc3545"
+        if "POSITIONAL" in sig:
+            card_style = ""
+            sig_color = "#28a745"
+        elif "SHORTS" in sig:
+            card_style = "sell-top"
+            sig_color = "#dc3545"
         else:
-            style = "wait-card"
-            color = "#888888"
+            card_style = "wait-top"
+            sig_color = "#6c757d"
             
         with t_col:
             st.markdown(f"""
-                <div class="sniper-card {style}">
-                    <div style="display: flex; justify-content: space-between;">
-                        <span style="font-size: 20px; font-weight: bold;">{row['Symbol']}</span>
-                        <span style="color: {color}; font-weight: bold;">{sig}</span>
+                <div class="sniper-card {card_style}">
+                    <div style="display: flex; justify-content: space-between; align-items: center;">
+                        <span style="font-size: 22px; font-weight: bold; color: #1a1a1a;">{row['Symbol']}</span>
+                        <span style="color: {sig_color}; font-weight: bold; font-size: 16px;">{sig}</span>
                     </div>
-                    <div style="margin-top: 10px; display: flex; justify-content: space-between; text-align: center;">
-                        <div><small>LTP</small><br><b>{row['LTP']}</b></div>
-                        <div><small>STOP LOSS</small><br><b style="color:#dc3545;">{row['Stop Loss']}</b></div>
-                        <div><small>TARGET</small><br><b style="color:#007bff;">{row['Target']}</b></div>
+                    <div style="margin-top: 15px; display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 10px; text-align: center;">
+                        <div><small style="color:#888;">LTP</small><br><b style="font-size: 18px;">{row['LTP']}</b></div>
+                        <div><small style="color:#888;">STOP LOSS</small><br><b style="color:#dc3545;">{row['Stop Loss']}</b></div>
+                        <div><small style="color:#888;">TARGET</small><br><b style="color:#007bff;">{row['Target']}</b></div>
                     </div>
                 </div>
             """, unsafe_allow_html=True)
 else:
-    st.error("Bhai, link toh sahi hai par data load nahi ho raha. Ek baar check karein ki sheet 'Public' hai ya nahi.")
+    # Agar abhi bhi load nahi hua toh ye message dikhayega
+    st.warning("⚠️ Bhai, Sheet abhi connect ho rahi hai. 1 minute rukiye ya browser refresh kijiye.")
+    st.info("Tip: Google Sheet mein 'File > Share > Publish to web' check karein ki wo active hai.")
 
 time.sleep(10)
 st.rerun()
