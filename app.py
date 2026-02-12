@@ -2,67 +2,72 @@ import streamlit as st
 import pandas as pd
 import time
 
-# --- WHITE THEME SETUP ---
-st.set_page_config(page_title="TGS SNIPER LIVE", layout="wide")
+# --- WHITE THEME ---
+st.set_page_config(page_title="TGS SNIPER", layout="wide")
 st.markdown("""
     <style>
     .stApp { background-color: #ffffff; color: #1e1e1e; }
     .sniper-card { 
-        background: #ffffff; border: 1px solid #dee2e6; border-radius: 12px; 
-        padding: 20px; margin-bottom: 15px; box-shadow: 0 4px 12px rgba(0,0,0,0.08);
-        border-left: 8px solid #28a745;
+        background: #fdfdfd; border: 1px solid #eee; border-radius: 10px; 
+        padding: 15px; margin-bottom: 10px; box-shadow: 0 2px 5px rgba(0,0,0,0.05);
     }
-    .sell-border { border-left-color: #dc3545; }
+    .buy-card { border-left: 10px solid #28a745; background-color: #f0fff4; }
+    .sell-card { border-left: 10px solid #dc3545; background-color: #fff5f5; }
+    .wait-card { border-left: 10px solid #cccccc; opacity: 0.6; }
     </style>
     """, unsafe_allow_html=True)
 
-# --- YOUR LIVE CSV LINK ---
 CSV_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vQly4ZQG_WYmZv2s5waDvjO71iG6-W28fqoS7d8Uc_7BeKnZ-6XyXebCdmBth8JVWpm8TEmUYHtwi9f/pub?output=csv"
 
 def load_data():
     try:
         df = pd.read_csv(CSV_URL)
-        # Cleaning column names (Removing extra spaces)
-        df.columns = df.columns.str.strip()
-        # Cleaning 'Signal Type' data and making it uppercase for matching
-        df['Signal Type'] = df['Signal Type'].astype(str).str.strip().str.upper()
-        # Filter signals
-        active_signals = df[df['Signal Type'].isin(['POSITIONAL', 'SHORTS'])]
-        return active_signals
+        df.columns = df.columns.str.strip() # Column names se space hatayega
+        return df
     except:
         return pd.DataFrame()
 
-st.title("🎯 TGS LIVE SNIPER TERMINAL")
+st.markdown("<h2 style='text-align: center;'>🎯 TGS DASHBOARD LIVE</h2>", unsafe_allow_html=True)
 
-# --- DISPLAY ---
-df_live = load_data()
+df = load_data()
 
-if not df_live.empty:
-    c1, c2 = st.columns(2)
-    for i, (idx, row) in enumerate(df_live.iterrows()):
-        t_col = c1 if i % 2 == 0 else c2
-        is_buy = row['Signal Type'] == 'POSITIONAL'
-        card_style = "" if is_buy else "sell-border"
-        color = "#28a745" if is_buy else "#dc3545"
+if not df.empty:
+    # Sirf top 10 stocks dikhayega taaki screen bhari rahe
+    display_df = df.head(10)
+    
+    col1, col2 = st.columns(2)
+    for i, (idx, row) in enumerate(display_df.iterrows()):
+        t_col = col1 if i % 2 == 0 else col2
         
+        # Signal Matching Logic
+        sig = str(row['Signal Type']).strip().upper()
+        
+        if sig == "POSITIONAL":
+            style = "buy-card"
+            color = "#28a745"
+        elif sig == "SHORTS":
+            style = "sell-card"
+            color = "#dc3545"
+        else:
+            style = "wait-card"
+            color = "#888888"
+            
         with t_col:
             st.markdown(f"""
-                <div class="sniper-card {card_style}">
+                <div class="sniper-card {style}">
                     <div style="display: flex; justify-content: space-between;">
-                        <span style="font-size: 24px; font-weight: bold;">{row['Symbol']}</span>
-                        <span style="color: {color}; font-weight: bold;">{row['Signal Type']}</span>
+                        <span style="font-size: 20px; font-weight: bold;">{row['Symbol']}</span>
+                        <span style="color: {color}; font-weight: bold;">{sig}</span>
                     </div>
-                    <div style="margin-top: 15px; display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 10px; text-align: center;">
-                        <div><small style="color:#666;">LTP</small><br><b>{row['LTP']}</b></div>
-                        <div><small style="color:#666;">STOP LOSS</small><br><b style="color:#dc3545;">{row['Stop Loss']}</b></div>
-                        <div><small style="color:#666;">TARGET</small><br><b style="color:#007bff;">{row['Target']}</b></div>
+                    <div style="margin-top: 10px; display: flex; justify-content: space-between; text-align: center;">
+                        <div><small>LTP</small><br><b>{row['LTP']}</b></div>
+                        <div><small>STOP LOSS</small><br><b style="color:#dc3545;">{row['Stop Loss']}</b></div>
+                        <div><small>TARGET</small><br><b style="color:#007bff;">{row['Target']}</b></div>
                     </div>
                 </div>
             """, unsafe_allow_html=True)
 else:
-    # If no POSITIONAL/SHORTS found, show this
-    st.info("⌛ Waiting for 'POSITIONAL' or 'SHORTS' signals in TGS Sheet...")
-    st.write("Current Sheet Status: Data Connected ✅ | Filter Active 🔍")
+    st.error("Bhai, link toh sahi hai par data load nahi ho raha. Ek baar check karein ki sheet 'Public' hai ya nahi.")
 
 time.sleep(10)
 st.rerun()
