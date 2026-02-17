@@ -1,114 +1,111 @@
 import streamlit as st
 import yfinance as yf
 
-st.set_page_config(page_title="TRADEX ULTRA", layout="wide")
+st.set_page_config(page_title="TRADEX PRO ULTRA", layout="wide")
 
-# --- ULTRA ATTRACTIVE CSS ---
+# --- PREMIUM CSS FOR HIGH-END DESIGN ---
 st.markdown("""
     <style>
-    @import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700&display=swap');
+    .main { background-color: #f8f9fa; }
+    .stApp { background-color: #f8f9fa; }
     
-    .main { background-color: #0e1117; }
-    
-    .stHeader { font-family: 'Orbitron', sans-serif; color: #00d4ff; text-align: center; text-shadow: 0 0 10px #00d4ff; }
-    
-    /* Box Styling */
-    .trade-card {
-        background: rgba(255, 255, 255, 0.05);
+    /* Premium Card Design */
+    .card {
+        background: white;
         border-radius: 15px;
         padding: 20px;
-        backdrop-filter: blur(10px);
-        border: 1px solid rgba(255, 255, 255, 0.1);
-        margin-bottom: 15px;
-        transition: transform 0.3s;
+        margin-bottom: 20px;
+        box-shadow: 0 4px 15px rgba(0,0,0,0.05);
+        border: 1px solid #eee;
     }
-    .trade-card:hover { transform: scale(1.02); border: 1px solid #00d4ff; }
-
-    /* Neon Signal Badges */
-    .badge {
-        padding: 8px 15px;
-        border-radius: 8px;
-        font-weight: bold;
-        text-transform: uppercase;
-        font-size: 14px;
-        box-shadow: 0 0 15px;
-    }
-    .buy-badge { background-color: #00ff88; color: #000; box-shadow: 0 0 20px #00ff88; }
-    .sell-badge { background-color: #ff3131; color: #fff; box-shadow: 0 0 20px #ff3131; }
     
-    /* BTST Special Card */
-    .btst-special {
-        background: linear-gradient(135deg, #6a1b9a 0%, #4a148c 100%);
+    /* Signal Badge Design */
+    .signal-badge {
+        padding: 10px 20px;
+        border-radius: 50px;
+        font-weight: 800;
+        font-size: 14px;
+        text-align: center;
         color: white;
-        border-radius: 15px;
-        padding: 25px;
-        box-shadow: 0 10px 30px rgba(106, 27, 154, 0.5);
+        display: inline-block;
+        box-shadow: 0 4px 10px rgba(0,0,0,0.15);
     }
+    .buy-color { background: linear-gradient(135deg, #00c853, #b9f6ca); color: #1b5e20; }
+    .sell-color { background: linear-gradient(135deg, #ff1744, #ff8a80); color: #b71c1c; }
+    
+    /* Header Styling */
+    .section-title {
+        font-size: 28px;
+        font-weight: 800;
+        color: #1a237e;
+        margin-bottom: 20px;
+        border-left: 5px solid #1a237e;
+        padding-left: 15px;
+    }
+    
+    .price-text { font-size: 32px; font-weight: 900; color: #212121; }
+    .btst-card { background: linear-gradient(135deg, #4527a0, #7e57c2); color: white; border-radius: 15px; padding: 25px; }
     </style>
     """, unsafe_allow_html=True)
 
-def get_ultra_data(ticker):
+def get_premium_data(ticker):
     try:
         data = yf.Ticker(ticker).history(period="2d", interval="15m")
         if data.empty: return None
         cp = round(data['Close'].iloc[-1], 2)
         ema = round(data['Close'].ewm(span=20, adjust=False).mean().iloc[-1], 2)
-        diff = cp * 0.008
         status = "BULLISH" if cp > ema else "BEARISH"
-        color = "#00ff88" if cp > ema else "#ff3131"
-        b_class = "buy-badge" if cp > ema else "sell-badge"
-        return {"p": cp, "s": status, "t": round(cp + (diff if cp > ema else -diff), 2), "sl": ema, "c": color, "bg": b_class}
+        badge = "buy-color" if cp > ema else "sell-color"
+        diff = cp * 0.007
+        return {"p": cp, "s": status, "t": round(cp + (diff if cp > ema else -diff), 2), "sl": ema, "badge": badge}
     except: return None
 
-st.markdown("<h1 class='stHeader'>⚡ TRADEX ULTRA PRO</h1>", unsafe_allow_html=True)
+st.markdown("<h1 style='text-align:center; color:#1a237e; font-weight:900;'>🚀 TRADEX PREMIUM</h1>", unsafe_allow_html=True)
 
 # --- INDEX SECTION ---
-st.write("### 💎 MARKET OVERVIEW")
-col1, col2 = st.columns(2)
+st.markdown("<div class='section-title'>🎯 MARKET STATUS</div>", unsafe_allow_html=True)
+c1, c2 = st.columns(2)
 indices = {"NIFTY 50": "^NSEI", "BANK NIFTY": "^NSEBANK"}
 for i, (name, sym) in enumerate(indices.items()):
-    res = get_ultra_data(sym)
+    res = get_premium_data(sym)
     if res:
-        with (col1 if i==0 else col2):
-            st.markdown(f"""<div class='trade-card'>
-                <p style='color:grey; margin:0;'>{name}</p>
-                <h1 style='color:{res['c']}; margin:0;'>{res['p']}</h1>
-                <p style='margin:0;'>Trend: <b>{res['s']}</b> | Support: {res['sl']}</p>
+        with (c1 if i==0 else c2):
+            st.markdown(f"""<div class='card'>
+                <p style='color:#757575; font-weight:bold; margin:0;'>{name}</p>
+                <p class='price-text'>₹{res['p']}</p>
+                <div class='signal-badge {res['badge']}'>{res['s']}</div>
             </div>""", unsafe_allow_html=True)
 
-# --- STOCKS TABLE SECTION ---
-st.write("### 🔥 LIVE BREAKOUT RADAR")
-MOVERS = {"ADANI ENT": "ADANIENT.NS", "RELIANCE": "RELIANCE.NS", "HDFC BANK": "HDFCBANK.NS", "SBIN": "SBIN.NS"}
-
-# Header line
-st.markdown("<div style='display:flex; justify-content:space-between; padding:10px; color:grey; font-weight:bold;'><span>STOCK</span><span>SIGNAL</span><span>TARGET</span></div>", unsafe_allow_html=True)
-
-for name, sym in MOVERS.items():
-    res = get_ultra_data(sym)
+# --- STOCKS SECTION ---
+st.markdown("<div class='section-title'>🔥 TOP PICKS</div>", unsafe_allow_html=True)
+STOCKS = ["RELIANCE.NS", "HDFCBANK.NS", "ADANIENT.NS", "SBIN.NS"]
+for s_sym in STOCKS:
+    res = get_premium_data(s_sym)
     if res:
         st.markdown(f"""
-        <div class='trade-card'>
+        <div class='card'>
             <div style='display:flex; justify-content:space-between; align-items:center;'>
                 <div>
-                    <h3 style='margin:0;'>{name}</h3>
-                    <p style='margin:0; font-size:18px;'>₹{res['p']}</p>
+                    <h2 style='margin:0;'>{s_sym.split('.')[0]}</h2>
+                    <p style='font-size:24px; font-weight:bold; margin:0;'>₹{res['p']}</p>
                 </div>
-                <div class='badge {res['bg']}'>SIGNAL</div>
+                <div class='signal-badge {res['badge']}'>{res['s']}</div>
                 <div style='text-align:right;'>
-                    <p style='color:#00ff88; margin:0;'>TGT: {res['t']}</p>
-                    <p style='color:#ff3131; margin:0;'>SL: {res['sl']}</p>
+                    <p style='color:#2e7d32; font-weight:bold; margin:0;'>TGT: {res['t']}</p>
+                    <p style='color:#c62828; font-weight:bold; margin:0;'>SL: {res['sl']}</p>
                 </div>
             </div>
         </div>
         """, unsafe_allow_html=True)
 
 # --- BTST SECTION ---
-st.write("### 🌙 OVERNIGHT LEGENDS (BTST)")
-res_btst = get_ultra_data("JINDALSTEL.NS")
-if res_btst:
+st.markdown("<div class='section-title'>🌙 OVERNIGHT SPECIAL</div>", unsafe_allow_html=True)
+btst_res = get_premium_data("JINDALSTEL.NS")
+if btst_res:
     st.markdown(f"""
-    <div class='btst-special'>
-        <h2 style='margin:0;'>✨ JINDAL STEEL - {res_btst['s']}</h2>
-        <p style='font-size:20px;'>Entry Zone: {res_btst['p']} | <b>View: {'🚀 GAP UP' if res_btst['s']=="BULLISH" else '🔻 GAP DOWN'}</b></p>
+    <div class='btst-card'>
+        <h2 style='margin:0;'>✨ JINDAL STEEL - {btst_res['s']}</h2>
+        <h3 style='margin:0;'>Action: {'BUY AT CLOSE' if btst_res['s']=="BULLISH" else 'SELL AT CLOSE'}</h3>
+        <p style='font-size:20px; margin-top:10px;'>Targeting Gap {'Up' if btst_res['s']=="BULLISH" else 'Down'} for Tomorrow</p>
     </div>
     """, unsafe_allow_html=True)
