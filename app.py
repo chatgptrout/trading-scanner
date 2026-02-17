@@ -2,85 +2,65 @@ import streamlit as st
 import pandas as pd
 import time
 
-# --- PC WHITE PRO THEME ---
-st.set_page_config(page_title="SANTOSH SNIPER PC", layout="wide")
+# --- OFFICE PC OPTIMIZED ---
+st.set_page_config(page_title="SANTOSH LIVE OFFICE", layout="wide")
 st.markdown("""
     <style>
-    .stApp { background-color: #ffffff; color: #1a1a1a; }
-    .breakout-card { 
-        background: #ffffff; border: 1px solid #e1e4e8; border-radius: 15px; 
-        padding: 25px; margin-bottom: 20px; box-shadow: 0 8px 20px rgba(0,0,0,0.06);
+    .stApp { background-color: #ffffff; }
+    .status-card { 
+        background: #fdfdfd; border: 1px solid #eee; border-radius: 10px; 
+        padding: 15px; margin-bottom: 10px; box-shadow: 0 2px 5px rgba(0,0,0,0.05);
+        border-left: 8px solid #adb5bd;
     }
-    .buy-zone { border-left: 12px solid #28a745; background-color: #f0fff4; }
-    .sell-zone { border-left: 12px solid #dc3545; background-color: #fff5f5; }
-    .price-big { font-size: 35px; font-weight: bold; color: #1a1a1a; }
+    .bullish { border-left-color: #28a745; background-color: #f0fff4; }
+    .bearish { border-left-color: #dc3545; background-color: #fff5f5; }
     </style>
     """, unsafe_allow_html=True)
 
-# Aapka Final CSV Link (Stocks & Commodity)
+# Aapki purani sheet ka link
 CSV_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vQly4ZQG_WYmZv2s5waDvjO71iG6-W28fqoS7d8Uc_7BeKnZ-6XyXebCdmBth8JVWpm8TEmUYHtwi9f/pub?output=csv"
 
-def fetch_active_trades():
+def get_data():
     try:
-        df = pd.read_csv(CSV_URL)
+        # Force refresh data
+        df = pd.read_csv(f"{CSV_URL}&cachebuster={time.time()}")
         df.columns = df.columns.str.strip()
-        # Cleaning data: Sirf Bullish/Bearish/Positional/Shorts filter honge
-        df['Status'] = df['Signal Type'].astype(str).str.strip().str.upper()
-        active = df[df['Status'].isin(['BULLISH', 'BEARISH', 'POSITIONAL', 'SHORTS'])]
-        return active
+        return df
     except:
         return pd.DataFrame()
 
-st.markdown("<h1 style='text-align: center;'>🎯 LIVE BREAKOUT TERMINAL</h1>", unsafe_allow_html=True)
+st.title("🎯 Santosh Sniper - Live Feed")
 
-active_df = fetch_active_trades()
+df = get_data()
 
-if not active_df.empty:
-    # PC ki badi screen par 2 bade columns
-    c1, c2 = st.columns(2)
-    for i, (idx, row) in enumerate(active_df.iterrows()):
-        target_col = c1 if i % 2 == 0 else c2
+if not df.empty:
+    # Saara data dikhayega, kuch bhi filter nahi karega!
+    col1, col2 = st.columns(2)
+    for i, (idx, row) in enumerate(df.head(20).iterrows()):
+        t_col = col1 if i % 2 == 0 else col2
+        sig = str(row['Signal Type']).strip().upper()
         
-        # Bullish vs Bearish logic
-        is_up = row['Status'] in ['BULLISH', 'POSITIONAL']
-        style = "buy-zone" if is_up else "sell-zone"
-        label = "🟢 BUY BREAKOUT" if is_up else "🔴 SELL BREAKOUT"
-        l_color = "#28a745" if is_up else "#dc3545"
+        # Color coding logic
+        status_class = ""
+        if "BULLISH" in sig or "POSITIONAL" in sig: status_class = "bullish"
+        elif "BEARISH" in sig or "SHORTS" in sig: status_class = "bearish"
         
-        with target_col:
+        with t_col:
             st.markdown(f"""
-                <div class="breakout-card {style}">
-                    <div style="display: flex; justify-content: space-between; align-items: center;">
-                        <span style="font-size: 28px; font-weight: bold;">{row['Symbol']}</span>
-                        <span style="color: {l_color}; font-weight: bold; font-size: 18px;">{label}</span>
+                <div class="status-card {status_class}">
+                    <div style="display: flex; justify-content: space-between;">
+                        <b style="font-size: 18px;">{row['Symbol']}</b>
+                        <span style="font-weight: bold;">{sig}</span>
                     </div>
-                    <hr style="border: 0.5px solid #eee; margin: 20px 0;">
-                    <div style="text-align: center; margin-bottom: 20px;">
-                        <div style="color: #888; font-size: 16px;">LIVE LTP</div>
-                        <div class="price-big">₹{row['LTP']}</div>
-                    </div>
-                    <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 15px; text-align: center;">
-                        <div style="background:#fff; padding:12px; border-radius:10px; border:1px solid #f1f1f1;">
-                            <small style="color:#666;">ENTRY (High)</small><br><b style="font-size:18px;">{row['High']}</b>
-                        </div>
-                        <div style="background:#fff; padding:12px; border-radius:10px; border:1px solid #f1f1f1;">
-                            <small style="color:#666;">STOP LOSS</small><br><b style="color:#dc3545; font-size:18px;">{row['Stop Loss']}</b>
-                        </div>
-                        <div style="background:#fff; padding:12px; border-radius:10px; border:1px solid #f1f1f1;">
-                            <small style="color:#666;">TARGET</small><br><b style="color:#007bff; font-size:18px;">{row['Target']}</b>
-                        </div>
+                    <div style="margin-top: 10px; display: grid; grid-template-columns: 1fr 1fr 1fr; text-align: center;">
+                        <div><small>LTP</small><br><b>{row['LTP']}</b></div>
+                        <div><small>SL</small><br><b style="color:#dc3545;">{row['Stop Loss']}</b></div>
+                        <div><small>TGT</small><br><b style="color:#007bff;">{row['Target']}</b></div>
                     </div>
                 </div>
             """, unsafe_allow_html=True)
 else:
-    # Screen khali dikhayega jab tak breakout na ho
-    st.markdown("""
-        <div style="text-align: center; margin-top: 100px; color: #adb5bd;">
-            <h2 style="font-size: 50px;">⌛</h2>
-            <h3>No Live Breakouts Detected</h3>
-            <p>Waiting for 'BULLISH' or 'BEARISH' signals in Santosh Multi-Scanner...</p>
-        </div>
-    """, unsafe_allow_html=True)
+    st.error("⚠️ Error: Office PC connection block kar raha hai. Ek baar browser mein link manually check karein.")
 
-time.sleep(5)
+time.sleep(10)
 st.rerun()
