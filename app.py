@@ -3,13 +3,14 @@ import yfinance as yf
 
 st.set_page_config(page_title="TRADEX PRO LIVE", layout="wide")
 
-# Custom Styling
+# Custom CSS for Professional Look
 st.markdown("""
     <style>
-    .signal-box { padding: 5px 10px; border-radius: 5px; color: white; font-weight: bold; text-align: center; display: inline-block; width: 100px; }
+    .signal-box { padding: 5px 15px; border-radius: 5px; color: white; font-weight: bold; text-align: center; display: inline-block; min-width: 80px; }
     .buy-bg { background-color: #2e7d32; }
     .sell-bg { background-color: #c62828; }
-    .btst-card { background-color: #F3E5F5; border-left: 10px solid #6A1B9A; padding: 15px; border-radius: 10px; box-shadow: 2px 2px 5px rgba(0,0,0,0.1); }
+    .btst-card { background-color: #f3e5f5; border-left: 10px solid #6a1b9a; padding: 20px; border-radius: 10px; margin-top: 10px; }
+    .metric-text { font-size: 24px; font-weight: bold; margin: 0; }
     </style>
     """, unsafe_allow_html=True)
 
@@ -26,8 +27,6 @@ def get_market_data(ticker):
         return {"p": cp, "s": status, "t": round(cp + (diff if cp > ema else -diff), 2), "sl": ema, "c": color, "bg": bg_class}
     except: return None
 
-st.title("🚀 TRADEX PRO LIVE DASHBOARD")
-
 # --- SECTION 1: INDEX WATCH ---
 st.header("🎯 INDEX WATCH")
 idx_col1, idx_col2 = st.columns(2)
@@ -36,24 +35,25 @@ for i, (name, sym) in enumerate(indices.items()):
     res = get_market_data(sym)
     if res:
         with (idx_col1 if i==0 else idx_col2):
-            st.subheader(name)
-            st.markdown(f"## {res['p']}")
+            st.write(f"### {name}")
+            st.markdown(f"<p class='metric-text'>{res['p']}</p>", unsafe_allow_html=True)
             st.markdown(f"**Trend:** <span style='color:{res['c']}'>{res['s']} ABOVE {res['sl']}</span>", unsafe_allow_html=True)
 
 st.divider()
 
-# --- SECTION 2: TABLE DESIGN ---
-st.header("🔥 TOP MARKET MOVERS")
-MOVERS = {"ADANI ENT": "ADANIENT.NS", "RELIANCE": "RELIANCE.NS", "HDFC BANK": "HDFCBANK.NS", "ICICI BANK": "ICICIBANK.NS", "AXIS BANK": "AXISBANK.NS", "SBIN": "SBIN.NS"}
+# --- SECTION 2: TOP MARKET MOVERS (Table Design) ---
+st.header("🔥 TOP MARKET MOVERS (Stocks with High Volume)")
+MOVERS = {"ADANI ENT": "ADANIENT.NS", "HDFC BANK": "HDFCBANK.NS", "RELIANCE": "RELIANCE.NS", "ICICI BANK": "ICICIBANK.NS", "AXIS BANK": "AXISBANK.NS", "SBIN": "SBIN.NS"}
 
-h = st.columns([2, 2, 2, 2, 2])
+# Header
+h = st.columns([2, 1, 1, 1, 1])
 h[0].write("**STOCK NAME**"); h[1].write("**SIGNAL**"); h[2].write("**LTP**"); h[3].write("**TARGET**"); h[4].write("**STOPLOSS**")
-st.markdown("---")
+st.divider()
 
 for name, sym in MOVERS.items():
     res = get_market_data(sym)
     if res:
-        c = st.columns([2, 2, 2, 2, 2])
+        c = st.columns([2, 1, 1, 1, 1])
         c[0].write(f"**{name}**")
         c[1].markdown(f"<div class='signal-box {res['bg']}'>SIGNAL</div>", unsafe_allow_html=True)
         c[2].write(f"**{res['p']}**")
@@ -61,13 +61,20 @@ for name, sym in MOVERS.items():
         c[4].markdown(f"<span style='color:#c62828;'>{res['sl']}</span>", unsafe_allow_html=True)
         st.divider()
 
-# --- SECTION 3: BTST SPECIAL ---
-st.header("🌙 BTST / STBT SPECIAL")
+# --- SECTION 3: BTST / STBT SPECIAL (Naya Add Kiya Hua) ---
+st.header("🌙 BTST / STBT SPECIAL (Overnight Picks)")
 BTST_LIST = {"TATA MOTORS": "TATAMOTORS.NS", "JINDAL STEEL": "JINDALSTEL.NS"}
 btst_col1, btst_col2 = st.columns(2)
+
 for i, (name, sym) in enumerate(BTST_LIST.items()):
     res = get_market_data(sym)
     if res:
         type_label = "BTST (Buy)" if res['s'] == "BULLISH" else "STBT (Sell)"
         with (btst_col1 if i==0 else btst_col2):
-            st.markdown(f"""<div class="btst-card"><h3 style='color:#4A148C; margin-top:0;'>✨ {name} - {type_label}</h3><p><b>Entry:</b> {res['p']}</p><p style='color:#4A148C; font-weight:bold;'>View: {'GAP UP' if res['s'] == "BULLISH" else 'GAP DOWN'}</p></div>""", unsafe_allow_html=True)
+            st.markdown(f"""
+                <div class="btst-card">
+                    <h3 style='color:#4a148c; margin-top:0;'>✨ {name} - {type_label}</h3>
+                    <p><b>Recommended Entry:</b> {res['p']}</p>
+                    <p style='color:#4a148c; font-weight:bold;'>View: {'📈 GAP UP EXPECTED' if res['s'] == "BULLISH" else '📉 GAP DOWN EXPECTED'}</p>
+                </div>
+            """, unsafe_allow_html=True)
