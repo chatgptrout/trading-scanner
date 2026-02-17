@@ -1,111 +1,101 @@
 import streamlit as st
 import yfinance as yf
 
-st.set_page_config(page_title="TRADEX PRO ULTRA", layout="wide")
+st.set_page_config(page_title="TRADEX BOLD", layout="wide")
 
-# --- PREMIUM CSS FOR HIGH-END DESIGN ---
+# --- ULTRA BOLD & COMPACT CSS ---
 st.markdown("""
     <style>
-    .main { background-color: #f8f9fa; }
-    .stApp { background-color: #f8f9fa; }
+    [data-testid="stMetricValue"] { font-size: 45px !important; font-weight: 900 !important; }
     
-    /* Premium Card Design */
-    .card {
+    .compact-card {
         background: white;
-        border-radius: 15px;
-        padding: 20px;
-        margin-bottom: 20px;
-        box-shadow: 0 4px 15px rgba(0,0,0,0.05);
-        border: 1px solid #eee;
+        border-radius: 8px;
+        padding: 10px 15px;
+        margin-bottom: 5px; /* Paas-paas lane ke liye kam margin */
+        border-left: 8px solid #1a237e;
+        box-shadow: 0 2px 5px rgba(0,0,0,0.1);
     }
     
-    /* Signal Badge Design */
-    .signal-badge {
-        padding: 10px 20px;
-        border-radius: 50px;
-        font-weight: 800;
-        font-size: 14px;
-        text-align: center;
+    .stock-name { font-size: 30px !important; font-weight: 900; color: #1a237e; margin: 0; }
+    .price-bold { font-size: 35px !important; font-weight: 900; color: #000; margin: 0; }
+    
+    .signal-label {
+        padding: 5px 15px;
+        border-radius: 4px;
+        font-size: 18px;
+        font-weight: 900;
         color: white;
-        display: inline-block;
-        box-shadow: 0 4px 10px rgba(0,0,0,0.15);
+        text-align: center;
     }
-    .buy-color { background: linear-gradient(135deg, #00c853, #b9f6ca); color: #1b5e20; }
-    .sell-color { background: linear-gradient(135deg, #ff1744, #ff8a80); color: #b71c1c; }
+    .bg-buy { background-color: #2e7d32; box-shadow: 0 0 10px #2e7d32; }
+    .bg-sell { background-color: #c62828; box-shadow: 0 0 10px #c62828; }
     
-    /* Header Styling */
-    .section-title {
-        font-size: 28px;
-        font-weight: 800;
-        color: #1a237e;
-        margin-bottom: 20px;
-        border-left: 5px solid #1a237e;
-        padding-left: 15px;
-    }
-    
-    .price-text { font-size: 32px; font-weight: 900; color: #212121; }
-    .btst-card { background: linear-gradient(135deg, #4527a0, #7e57c2); color: white; border-radius: 15px; padding: 25px; }
+    .level-text { font-size: 20px; font-weight: bold; margin: 0; }
     </style>
     """, unsafe_allow_html=True)
 
-def get_premium_data(ticker):
+def get_bold_data(ticker):
     try:
         data = yf.Ticker(ticker).history(period="2d", interval="15m")
         if data.empty: return None
         cp = round(data['Close'].iloc[-1], 2)
         ema = round(data['Close'].ewm(span=20, adjust=False).mean().iloc[-1], 2)
-        status = "BULLISH" if cp > ema else "BEARISH"
-        badge = "buy-color" if cp > ema else "sell-color"
         diff = cp * 0.007
-        return {"p": cp, "s": status, "t": round(cp + (diff if cp > ema else -diff), 2), "sl": ema, "badge": badge}
+        status = "BUY" if cp > ema else "SELL"
+        bg = "bg-buy" if cp > ema else "bg-sell"
+        color = "#2e7d32" if cp > ema else "#c62828"
+        return {"p": cp, "s": status, "t": round(cp + (diff if cp > ema else -diff), 2), "sl": ema, "bg": bg, "c": color}
     except: return None
 
-st.markdown("<h1 style='text-align:center; color:#1a237e; font-weight:900;'>🚀 TRADEX PREMIUM</h1>", unsafe_allow_html=True)
+st.markdown("<h1 style='text-align:center; font-size:40px;'>🚀 TRADEX BOLD</h1>", unsafe_allow_html=True)
 
-# --- INDEX SECTION ---
-st.markdown("<div class='section-title'>🎯 MARKET STATUS</div>", unsafe_allow_html=True)
+# --- INDEX SECTION (Compact) ---
+st.markdown("### 🎯 INDEX")
 c1, c2 = st.columns(2)
-indices = {"NIFTY 50": "^NSEI", "BANK NIFTY": "^NSEBANK"}
+indices = {"NIFTY": "^NSEI", "BANKNIFTY": "^NSEBANK"}
 for i, (name, sym) in enumerate(indices.items()):
-    res = get_premium_data(sym)
+    res = get_bold_data(sym)
     if res:
         with (c1 if i==0 else c2):
-            st.markdown(f"""<div class='card'>
-                <p style='color:#757575; font-weight:bold; margin:0;'>{name}</p>
-                <p class='price-text'>₹{res['p']}</p>
-                <div class='signal-badge {res['badge']}'>{res['s']}</div>
+            st.markdown(f"""<div class='compact-card' style='border-left-color:{res['c']};'>
+                <h2 style='margin:0;'>{name}</h2>
+                <p class='price-bold'>{res['p']}</p>
+                <p class='level-text'>{res['s']} ABOVE {res['sl']}</p>
             </div>""", unsafe_allow_html=True)
 
-# --- STOCKS SECTION ---
-st.markdown("<div class='section-title'>🔥 TOP PICKS</div>", unsafe_allow_html=True)
-STOCKS = ["RELIANCE.NS", "HDFCBANK.NS", "ADANIENT.NS", "SBIN.NS"]
+# --- STOCKS SECTION (Bada Text, Kam Jagah) ---
+st.markdown("### 🔥 STOCKS")
+STOCKS = ["RELIANCE.NS", "HDFCBANK.NS", "ADANIENT.NS", "SBIN.NS", "BHARATFORG.NS"]
+
 for s_sym in STOCKS:
-    res = get_premium_data(s_sym)
+    res = get_bold_data(s_sym)
     if res:
         st.markdown(f"""
-        <div class='card'>
+        <div class='compact-card' style='border-left-color:{res['c']};'>
             <div style='display:flex; justify-content:space-between; align-items:center;'>
-                <div>
-                    <h2 style='margin:0;'>{s_sym.split('.')[0]}</h2>
-                    <p style='font-size:24px; font-weight:bold; margin:0;'>₹{res['p']}</p>
+                <div style='flex:2;'>
+                    <p class='stock-name'>{s_sym.split('.')[0]}</p>
+                    <p class='price-bold'>₹{res['p']}</p>
                 </div>
-                <div class='signal-badge {res['badge']}'>{res['s']}</div>
-                <div style='text-align:right;'>
-                    <p style='color:#2e7d32; font-weight:bold; margin:0;'>TGT: {res['t']}</p>
-                    <p style='color:#c62828; font-weight:bold; margin:0;'>SL: {res['sl']}</p>
+                <div style='flex:1;'>
+                    <div class='signal-label {res['bg']}'>{res['s']}</div>
+                </div>
+                <div style='flex:2; text-align:right;'>
+                    <p class='level-text' style='color:#2e7d32;'>TGT: {res['t']}</p>
+                    <p class='level-text' style='color:#c62828;'>SL: {res['sl']}</p>
                 </div>
             </div>
         </div>
         """, unsafe_allow_html=True)
 
-# --- BTST SECTION ---
-st.markdown("<div class='section-title'>🌙 OVERNIGHT SPECIAL</div>", unsafe_allow_html=True)
-btst_res = get_premium_data("JINDALSTEL.NS")
+# --- BTST (Kone mein aur Bada) ---
+st.markdown("### 🌙 BTST")
+btst_res = get_bold_data("JINDALSTEL.NS")
 if btst_res:
     st.markdown(f"""
-    <div class='btst-card'>
-        <h2 style='margin:0;'>✨ JINDAL STEEL - {btst_res['s']}</h2>
-        <h3 style='margin:0;'>Action: {'BUY AT CLOSE' if btst_res['s']=="BULLISH" else 'SELL AT CLOSE'}</h3>
-        <p style='font-size:20px; margin-top:10px;'>Targeting Gap {'Up' if btst_res['s']=="BULLISH" else 'Down'} for Tomorrow</p>
+    <div class='compact-card' style='background:#f3e5f5; border-left:15px solid #4a148c;'>
+        <h1 style='color:#4a148c; margin:0;'>✨ JINDAL STEL: {btst_res['s']}</h1>
+        <p class='price-bold'>Entry: {btst_res['p']}</p>
     </div>
     """, unsafe_allow_html=True)
