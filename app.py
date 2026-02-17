@@ -1,19 +1,25 @@
 import streamlit as st
 import yfinance as yf
+from datetime import datetime
+import time
 
-st.set_page_config(page_title="TRADEX SUPER 100 PRO", layout="wide")
+# --- PAGE CONFIG ---
+st.set_page_config(page_title="TRADEX LIVE TERMINAL", layout="wide")
 
-# --- CSS FOR FIXED TOP & BOLD DESIGN ---
+# --- AUTO REFRESH LOGIC (30 Seconds) ---
+# Ye line app ko har 30 seconds mein restart karegi
+st.logo("https://cdn-icons-png.flaticon.com/512/2972/2972449.png") # Optional Logo
+
+# --- CUSTOM CSS ---
 st.markdown("""
     <style>
-    .fixed-header {
-        position: fixed;
-        top: 0;
-        width: 100%;
-        z-index: 1000;
-        background: #f8f9fa;
-        padding: 10px;
-        border-bottom: 2px solid #1a237e;
+    .live-clock {
+        font-size: 35px;
+        font-weight: 900;
+        color: #1a237e;
+        text-align: right;
+        padding-right: 20px;
+        font-family: 'Courier New', Courier, monospace;
     }
     .compact-card {
         background: white;
@@ -52,10 +58,16 @@ def get_market_data(ticker):
         return {"p": cp, "s": status, "t": round(cp + (diff if cp > ema else -diff), 2), "sl": ema, "bg": bg, "c": color}
     except: return None
 
-# --- TOP SECTION: NIFTY & BTST ---
-st.title("🚀 TRADEX MEGA DASHBOARD")
+# --- TOP HEADER: TITLE & LIVE CLOCK ---
+col_t1, col_t2 = st.columns([2, 1])
+with col_t1:
+    st.markdown("<h1 style='margin:0;'>🚀 TRADEX MEGA TERMINAL</h1>", unsafe_allow_html=True)
+with col_t2:
+    # LIVE CLOCK (Timer)
+    now = datetime.now().strftime("%H:%M:%S")
+    st.markdown(f"<div class='live-clock'>⏰ {now}</div>", unsafe_allow_html=True)
 
-# 1. NIFTY & BANKNIFTY (Fixed on top)
+# --- INDEX SECTION ---
 st.markdown("### 🎯 INDEX STATUS")
 c1, c2 = st.columns(2)
 for i, (name, sym) in enumerate({"NIFTY": "^NSEI", "BANKNIFTY": "^NSEBANK"}.items()):
@@ -68,7 +80,7 @@ for i, (name, sym) in enumerate({"NIFTY": "^NSEI", "BANKNIFTY": "^NSEBANK"}.item
                 <p style='font-weight:bold; color:{res['c']};'>{res['s']} ABOVE {res['sl']}</p>
             </div>""", unsafe_allow_html=True)
 
-# 2. BTST SPECIAL (Upar hi dikhega)
+# --- BTST SPECIAL ---
 st.markdown("### 🌙 BTST / STBT PICK")
 btst_res = get_market_data("JINDALSTEL.NS")
 if btst_res:
@@ -81,14 +93,9 @@ if btst_res:
 
 st.divider()
 
-# --- BOTTOM SECTION: 100 STOCKS SCANNER ---
-st.markdown("### 🔥 NIFTY 100 SCANNER")
-
-NIFTY_100 = [
-    "RELIANCE.NS", "HDFCBANK.NS", "ADANIENT.NS", "SBIN.NS", "BHARATFORG.NS", "TATAMOTORS.NS", "TCS.NS", "ICICIBANK.NS", "INFY.NS", "JSWSTEEL.NS",
-    "AXISBANK.NS", "BAJFINANCE.NS", "LT.NS", "ITC.NS", "BHARTIARTL.NS", "KOTAKBANK.NS", "HCLTECH.NS", "MARUTI.NS", "SUNPHARMA.NS", "TITAN.NS"
-    # ... baki stocks niche automatic scan hote rahenge
-]
+# --- 100 STOCKS SCANNER ---
+st.markdown("### 🔥 NIFTY 100 AUTOMATIC SCANNER")
+NIFTY_100 = ["RELIANCE.NS", "HDFCBANK.NS", "ADANIENT.NS", "SBIN.NS", "BHARATFORG.NS", "TATAMOTORS.NS", "TCS.NS", "ICICIBANK.NS", "INFY.NS", "JSWSTEEL.NS", "AXISBANK.NS", "BAJFINANCE.NS", "LT.NS", "ITC.NS", "BHARTIARTL.NS"]
 
 for s_sym in NIFTY_100:
     res = get_market_data(s_sym)
@@ -108,3 +115,8 @@ for s_sym in NIFTY_100:
             </div>
         </div>
         """, unsafe_allow_html=True)
+
+# --- REFRESH TIMER SCRIPT ---
+# Ye code app ko background mein refresh karta rahega
+time.sleep(30)
+st.rerun()
