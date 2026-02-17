@@ -1,75 +1,70 @@
 import streamlit as st
 import yfinance as yf
 
-st.set_page_config(page_title="TRADEX BOLD", layout="wide")
+st.set_page_config(page_title="TRADEX 100 BOLD", layout="wide")
 
-# --- ULTRA BOLD & COMPACT CSS ---
+# --- CSS FOR BOLD & COMPACT DESIGN ---
 st.markdown("""
     <style>
-    [data-testid="stMetricValue"] { font-size: 45px !important; font-weight: 900 !important; }
-    
     .compact-card {
         background: white;
         border-radius: 8px;
-        padding: 10px 15px;
-        margin-bottom: 5px; /* Paas-paas lane ke liye kam margin */
-        border-left: 8px solid #1a237e;
+        padding: 12px 18px;
+        margin-bottom: 6px;
+        border-left: 10px solid #1a237e;
         box-shadow: 0 2px 5px rgba(0,0,0,0.1);
     }
-    
-    .stock-name { font-size: 30px !important; font-weight: 900; color: #1a237e; margin: 0; }
-    .price-bold { font-size: 35px !important; font-weight: 900; color: #000; margin: 0; }
-    
+    .stock-name { font-size: 28px !important; font-weight: 900; color: #1a237e; margin: 0; padding: 0; }
+    .price-bold { font-size: 32px !important; font-weight: 900; color: #000; margin: 0; padding: 0; }
     .signal-label {
-        padding: 5px 15px;
+        padding: 6px 12px;
         border-radius: 4px;
-        font-size: 18px;
+        font-size: 16px;
         font-weight: 900;
         color: white;
         text-align: center;
+        min-width: 80px;
     }
-    .bg-buy { background-color: #2e7d32; box-shadow: 0 0 10px #2e7d32; }
-    .bg-sell { background-color: #c62828; box-shadow: 0 0 10px #c62828; }
-    
-    .level-text { font-size: 20px; font-weight: bold; margin: 0; }
+    .bg-buy { background-color: #2e7d32; box-shadow: 0 0 8px #2e7d32; }
+    .bg-sell { background-color: #c62828; box-shadow: 0 0 8px #c62828; }
+    .level-text { font-size: 18px; font-weight: bold; margin: 0; }
     </style>
     """, unsafe_allow_html=True)
 
-def get_bold_data(ticker):
+def get_market_data(ticker):
     try:
         data = yf.Ticker(ticker).history(period="2d", interval="15m")
         if data.empty: return None
         cp = round(data['Close'].iloc[-1], 2)
         ema = round(data['Close'].ewm(span=20, adjust=False).mean().iloc[-1], 2)
-        diff = cp * 0.007
         status = "BUY" if cp > ema else "SELL"
         bg = "bg-buy" if cp > ema else "bg-sell"
         color = "#2e7d32" if cp > ema else "#c62828"
+        diff = cp * 0.007
         return {"p": cp, "s": status, "t": round(cp + (diff if cp > ema else -diff), 2), "sl": ema, "bg": bg, "c": color}
     except: return None
 
-st.markdown("<h1 style='text-align:center; font-size:40px;'>🚀 TRADEX BOLD</h1>", unsafe_allow_html=True)
+st.markdown("<h1 style='text-align:center; font-size:45px; margin:0;'>🚀 TRADEX SUPER 100</h1>", unsafe_allow_html=True)
 
-# --- INDEX SECTION (Compact) ---
-st.markdown("### 🎯 INDEX")
-c1, c2 = st.columns(2)
-indices = {"NIFTY": "^NSEI", "BANKNIFTY": "^NSEBANK"}
-for i, (name, sym) in enumerate(indices.items()):
-    res = get_bold_data(sym)
-    if res:
-        with (c1 if i==0 else c2):
-            st.markdown(f"""<div class='compact-card' style='border-left-color:{res['c']};'>
-                <h2 style='margin:0;'>{name}</h2>
-                <p class='price-bold'>{res['p']}</p>
-                <p class='level-text'>{res['s']} ABOVE {res['sl']}</p>
-            </div>""", unsafe_allow_html=True)
+# --- NIFTY 100 SYMBOLS LIST ---
+NIFTY_100 = [
+    "ABB.NS", "ADANIENT.NS", "ADANIPORTS.NS", "ADANIPOWER.NS", "ATGL.NS", "AMBUJACEM.NS", "APOLLOHOSP.NS", "ASIANPAINT.NS", "AXISBANK.NS", "BAJAJ-AUTO.NS",
+    "BAJFINANCE.NS", "BAJAJFINSV.NS", "BAJAJHLDNG.NS", "BANKBARODA.NS", "BERGEPAINT.NS", "BEL.NS", "BPCL.NS", "BHARTIARTL.NS", "BIOCON.NS", "BOSCHLTD.NS",
+    "BRITANNIA.NS", "CANBK.NS", "CHOLAFIN.NS", "CIPLA.NS", "COALINDIA.NS", "COLPAL.NS", "DLF.NS", "DABUR.NS", "DIVISLAB.NS", "DRREDDY.NS",
+    "EICHERMOT.NS", "GAIL.NS", "GICRE.NS", "GODREJCP.NS", "GRASIM.NS", "HCLTECH.NS", "HDFCBANK.NS", "HDFCLIFE.NS", "HEROMOTOCO.NS", "HINDALCO.NS",
+    "HAL.NS", "HINDUNILVR.NS", "ICICIBANK.NS", "ICICIGI.NS", "ICICIPRULI.NS", "ITC.NS", "IOC.NS", "IRCTC.NS", "IRFC.NS", "INDUSINDBK.NS",
+    "INFY.NS", "INDIGO.NS", "JSWSTEEL.NS", "JINDALSTEL.NS", "JIOFIN.NS", "KOTAKBANK.NS", "LTIM.NS", "LT.NS", "LICI.NS", "M&M.NS",
+    "MARICO.NS", "MARUTI.NS", "NTPC.NS", "NESTLEIND.NS", "ONGC.NS", "PIDILITIND.NS", "PFC.NS", "POWERGRID.NS", "PNB.NS", "RELIANCE.NS",
+    "SBICARD.NS", "SBILIFE.NS", "SRF.NS", "SRTRANSFIN.NS", "SHREECEM.NS", "SIEMENS.NS", "SBIN.NS", "SUNPHARMA.NS", "TATACOMM.NS", "TATACONSUM.NS",
+    "TATAELXSI.NS", "TATAMOTORS.NS", "TATAPOWER.NS", "TATASTEEL.NS", "TCS.NS", "TECHM.NS", "TITAN.NS", "TORNTPHARM.NS", "TRENT.NS", "ULTRACEMCO.NS",
+    "UNITDSPR.NS", "VBL.NS", "VEDL.NS", "WIPRO.NS", "ZOMATO.NS", "ZYDUSLIFE.NS", "BHARATFORG.NS", "MUTHOOTFIN.NS"
+]
 
-# --- STOCKS SECTION (Bada Text, Kam Jagah) ---
-st.markdown("### 🔥 STOCKS")
-STOCKS = ["RELIANCE.NS", "HDFCBANK.NS", "ADANIENT.NS", "SBIN.NS", "BHARATFORG.NS"]
+# --- SCANNING SECTION ---
+st.markdown(f"### 🔥 Live Scanning: {len(NIFTY_100)} Stocks")
 
-for s_sym in STOCKS:
-    res = get_bold_data(s_sym)
+for s_sym in NIFTY_100:
+    res = get_market_data(s_sym)
     if res:
         st.markdown(f"""
         <div class='compact-card' style='border-left-color:{res['c']};'>
@@ -88,14 +83,3 @@ for s_sym in STOCKS:
             </div>
         </div>
         """, unsafe_allow_html=True)
-
-# --- BTST (Kone mein aur Bada) ---
-st.markdown("### 🌙 BTST")
-btst_res = get_bold_data("JINDALSTEL.NS")
-if btst_res:
-    st.markdown(f"""
-    <div class='compact-card' style='background:#f3e5f5; border-left:15px solid #4a148c;'>
-        <h1 style='color:#4a148c; margin:0;'>✨ JINDAL STEL: {btst_res['s']}</h1>
-        <p class='price-bold'>Entry: {btst_res['p']}</p>
-    </div>
-    """, unsafe_allow_html=True)
