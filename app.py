@@ -3,26 +3,30 @@ import yfinance as yf
 from datetime import datetime
 import time
 import pytz 
-import pandas as pd
 
-st.set_page_config(page_title="TRADEX MEGA TERMINAL", layout="wide")
+st.set_page_config(page_title="TRADEX PRO V2", layout="wide")
 
-# --- CUSTOM CSS ---
+# --- CUSTOM CSS (Purana Data + Naya Professional Look) ---
 st.markdown("""
     <style>
-    /* Clock Style Restored */
-    .live-clock { font-size: 35px; font-weight: 900; color: #d32f2f; text-align: right; font-family: 'Courier New', monospace; }
-    .buy-card { background: #e8f5e9; border: 3px solid #2e7d32; border-radius: 8px; padding: 15px; margin-bottom: 8px; }
-    .danger-card { background: #ffebee; border: 3px solid #c62828; border-radius: 8px; padding: 15px; margin-bottom: 8px; animation: blinker 1.5s linear infinite; }
-    .compact-card { background: white; border-radius: 8px; padding: 15px; margin-bottom: 8px; border-left: 10px solid #1a237e; box-shadow: 0 2px 5px rgba(0,0,0,0.1); }
-    @keyframes blinker { 50% { opacity: 0.7; } }
-    .stock-name { font-size: 24px !important; font-weight: 900; color: #1a237e; margin: 0; }
-    .price-bold { font-size: 26px !important; font-weight: 900; color: #000; margin: 0; }
-    .signal-label { padding: 6px 12px; border-radius: 4px; font-size: 14px; font-weight: 900; color: white; text-align: center; width: 85px; }
-    .option-card { background: #e3f2fd; border: 2px solid #1565c0; border-radius: 10px; padding: 12px; margin-bottom: 10px; display: flex; justify-content: space-between; align-items: center; }
-    .buy-level { font-size: 18px; font-weight: 900; color: #1565c0; margin: 0; }
-    .tgt-text { color: #2e7d32 !important; font-weight: 900; margin: 0; font-size: 16px; }
-    .sl-text { color: #c62828 !important; font-weight: 900; margin: 0; font-size: 16px; }
+    .stApp { background-color: #0a0e14; color: #e0e0e0; }
+    .live-clock { font-size: 35px; font-weight: 900; color: #ff5252; text-align: right; font-family: 'Courier New', monospace; }
+    
+    /* GTF Zone Badges */
+    .zone-badge { padding: 4px 10px; border-radius: 4px; font-size: 12px; font-weight: 900; color: #000; margin-top: 5px; display: inline-block; }
+    .demand-badge { background-color: #ffd700; } 
+    .supply-badge { background-color: #ff5252; color: #fff; } 
+    .safe-badge { background-color: #4caf50; color: #fff; } 
+
+    /* Card Styling (Scanner and Status) */
+    .pro-card { background: #161b22; border: 1px solid #30363d; border-radius: 12px; padding: 20px; margin-bottom: 10px; border-left: 8px solid #1f6feb; }
+    .stock-name { font-size: 24px; font-weight: 900; color: #ffffff; margin: 0; }
+    .price-bold { font-size: 28px; font-weight: 900; color: #ffffff; margin: 0; }
+    .tgt-text { color: #4caf50 !important; font-weight: 900; font-size: 16px; margin: 0; }
+    .sl-text { color: #ff5252 !important; font-weight: 900; font-size: 16px; margin: 0; }
+    
+    /* Filter Buttons */
+    .filter-btn { background: #21262d; border: 1px solid #30363d; padding: 10px 20px; border-radius: 8px; color: #c9d1d9; font-weight: bold; margin-right: 10px; }
     </style>
     """, unsafe_allow_html=True)
 
@@ -38,7 +42,7 @@ def calculate_rsi(data, window=14):
     rs = gain / loss
     return 100 - (100 / (1 + rs))
 
-def get_market_data(ticker):
+def get_pro_data(ticker):
     try:
         df = yf.Ticker(ticker).history(period="5d", interval="15m")
         if df.empty: return None
@@ -46,69 +50,81 @@ def get_market_data(ticker):
         ema = round(df['Close'].ewm(span=20, adjust=False).mean().iloc[-1], 2)
         df['RSI'] = calculate_rsi(df['Close'])
         rsi_val = round(df['RSI'].iloc[-1], 2)
-        is_sw = abs(cp - ema) / ema < 0.001
-        is_danger = rsi_val > 80
-        status = "SIDEWAYS" if is_sw else ("BUY" if cp > ema else "SELL")
         
-        if is_danger: style = "danger-card"; c = "#c62828"; msg = "⚠️ CRITICAL OVERBOUGHT"
-        elif status == "BUY": style = "buy-card"; c = "#2e7d32"; msg = f"BULLISH ABOVE {ema}"
-        elif status == "SELL": style = "compact-card"; c = "#c62828"; msg = f"BEARISH BELOW {ema}"
-        else: style = "compact-card"; c = "#9e9e9e"; msg = "SIDEWAYS"
-            
+        # Zone Logic
+        demand_zone = round(ema * 0.99, 2)
+        supply_zone = round(ema * 1.01, 2)
+        
+        status = "BULLISH" if cp > ema else "BEARISH"
+        zone_msg = "📍 DEMAND ZONE" if cp <= demand_zone * 1.005 else ("🚫 SUPPLY ZONE" if cp >= supply_zone * 0.995 else "APPROACHING ZONE")
+        badge_class = "demand-badge" if "APPROACHING" in zone_msg else ("safe-badge" if "DEMAND" in zone_msg else "supply-badge")
+        
         diff = cp * 0.007
-        return {"p": cp, "s": status, "sl": ema, "t": round(cp + (diff if cp > ema else -diff), 2),
-                "rsi": rsi_val, "style": style, "c": c, "danger": is_danger, "msg": msg,
-                "zone": "✅ SAFE ENTRY" if abs(cp - ema) / ema < 0.003 else "⚠️ PRICE TOO HIGH"}
+        is_safe = "✅ SAFE ENTRY" if abs(cp - ema) / ema < 0.003 else "⚠️ PRICE TOO HIGH"
+        
+        return {"p": cp, "ema": ema, "rsi": rsi_val, "status": status, "msg": zone_msg, "b_class": badge_class, 
+                "d_z": demand_zone, "t": round(cp + (diff if cp > ema else -diff), 2), "zone_info": is_safe}
     except: return None
-
-def get_atm_strike(price, base=100):
-    return int(base * round(price / base))
 
 QUALITY_LIST = ["ITC.NS", "RELIANCE.NS", "HDFCBANK.NS", "TCS.NS", "INFY.NS", "ICICIBANK.NS", "SBIN.NS"]
 
-# --- HEADER WITH CLOCK ---
-col_t1, col_t2 = st.columns([2, 1])
-with col_t1:
-    st.markdown("<h1 style='margin:0;'>🚀 TRADEX MEGA TERMINAL</h1>", unsafe_allow_html=True)
-with col_t2:
-    st.markdown(f"<div class='live-clock'>⏰ {get_ist_time()}</div>", unsafe_allow_html=True)
+# --- HEADER ---
+c1, c2 = st.columns([3, 1])
+with c1: st.title("🚀 TRADEX PRO V2")
+with c2: st.markdown(f"<div class='live-clock'>⏰ {get_ist_time()}</div>", unsafe_allow_html=True)
 
-# --- 1. MARKET STATUS ---
-st.markdown("### 🎯 INDEX & COMMODITY STATUS")
-m_cols = st.columns(5)
-assets = {"SENSEX": "^BSESN", "NIFTY": "^NSEI", "CRUDE OIL": "CL=F", "NATURAL GAS": "NG=F", "GOLD": "GC=F"}
-results = {}
+# --- 1. FILTERS & STATUS ---
+st.markdown("### 🔍 INSTITUTIONAL FILTERS")
+f_cols = st.columns(6)
+with f_cols[0]: st.markdown("<div class='filter-btn' style='background:#ffd700; color:black;'>DAILY</div>", unsafe_allow_html=True)
+with f_cols[1]: st.markdown("<div class='filter-btn'>WEEKLY</div>", unsafe_allow_html=True)
+
+st.markdown("---")
+assets = {"NIFTY 50": "^NSEI", "SENSEX": "^BSESN", "CRUDE OIL": "CL=F", "GOLD": "GC=F"}
+m_cols = st.columns(4)
+
 for i, (name, sym) in enumerate(assets.items()):
-    res = get_market_data(sym)
-    results[name] = res
+    res = get_pro_data(sym)
     if res:
+        card_col = "#238636" if res['status'] == "BULLISH" else "#da3633"
+        if res['rsi'] > 80: card_col = "#ff5252" # Critical RSI Glow
         with m_cols[i]:
-            st.markdown(f"<div class='{res['style']}'><h4>{name}</h4><p class='price-bold'>{res['p']}</p><p style='font-weight:900;color:{res['c']}'>{res['msg']}</p><p style='font-size:12px;font-weight:bold;'>RSI: {res['rsi']}</p></div>", unsafe_allow_html=True)
+            st.markdown(f"""<div class='pro-card' style='border-left-color:{card_col};'>
+                <div style='color:#8b949e; font-weight:bold;'>{name}</div>
+                <div class='price-bold'>{res['p']}</div>
+                <div class='zone-badge {res['b_class']}'>{res['msg']}</div>
+                <div style='margin-top:10px; font-size:12px; color:#8b949e;'>RSI: {res['rsi']} | EMA: {res['ema']}</div>
+            </div>""", unsafe_allow_html=True)
 
-# --- 2. STRIKE PRICE RADAR ---
-st.markdown("### 🔥 STRIKE PRICE RADAR (AUTO-SIGNALS)")
-o_cols = st.columns(3)
-def display_option(name, res, col, base=100):
-    if res:
-        with col:
-            if res['danger']: st.markdown(f"<div style='background:#ffebee; border:2px solid #c62828; padding:12px; border-radius:10px; color:#c62828;'><b>{name}: DANGER (RSI {res['rsi']})</b></div>", unsafe_allow_html=True)
-            elif res['s'] == "BUY": 
-                strike = get_atm_strike(res['p'], base)
-                st.markdown(f"<div class='option-card'><b>{name} {strike} CE</b><div class='buy-level'>BUY ABOVE: {res['p']} 👁️🙏</div></div>", unsafe_allow_html=True)
+# --- 2. RESTORED NIFTY 100 SCANNER (TGT/SL/STARS) ---
+st.markdown("### 🔥 NIFTY 100 ZONE SCANNER")
+NIFTY_100 = ["RELIANCE.NS", "HDFCBANK.NS", "ADANIENT.NS", "SBIN.NS", "TCS.NS", "BHARATFORG.NS"]
 
-display_option("SENSEX", results.get("SENSEX"), o_cols[0], 100)
-display_option("NIFTY", results.get("NIFTY"), o_cols[1], 50)
-display_option("CRUDE", results.get("CRUDE OIL"), o_cols[2], 50)
-
-# --- 3. NIFTY 100 LIVE SCANNER ---
-st.markdown("### 🔥 NIFTY 100 LIVE SCANNER")
-NIFTY_100 = ["RELIANCE.NS", "HDFCBANK.NS", "ADANIENT.NS", "SBIN.NS", "BHARATFORG.NS", "TCS.NS", "ICICIBANK.NS", "INFY.NS"]
 for sym in NIFTY_100:
-    res = get_market_data(sym)
+    res = get_pro_data(sym)
     if res:
-        star = "⭐ " if sym in QUALITY_LIST else ""
-        bg = res['c']
-        st.markdown(f"""<div class='compact-card' style='border-left-color:{bg};'><div style='display:flex; justify-content:space-between; align-items:center;'><div style='flex:2.5;'><p class='stock-name'>{star}{sym.split('.')[0]}</p><p class='price-bold'>₹{res['p']}</p><p style='font-weight:bold;font-size:13px;color:{bg};'>{res['zone']}</p></div><div style='flex:1;text-align:center;'><div class='signal-label' style='background-color:{bg};margin:auto;'>{res['s']}</div></div><div style='flex:2.5;text-align:right;'><p class='tgt-text'>TGT: {res['t']}</p><p class='sl-text'>SL: {res['sl']}</p><p style='font-size:12px;color:#666;'>RSI: {res['rsi']}</p></div></div></div>""", unsafe_allow_html=True)
+        star = "⭐" if sym in QUALITY_LIST else ""
+        bg = "#238636" if res['status'] == "BULLISH" else "#da3633"
+        st.markdown(f"""
+        <div class='pro-card' style='border-left-color:{bg};'>
+            <div style='display:flex; justify-content:space-between; align-items:center;'>
+                <div style='flex:2;'>
+                    <div class='stock-name'>{star} {sym.split('.')[0]}</div>
+                    <div class='price-bold'>₹{res['p']}</div>
+                    <div style='color:{bg}; font-weight:bold; font-size:13px;'>{res['zone_info']}</div>
+                </div>
+                <div style='flex:1.5; text-align:center;'>
+                    <div class='zone-badge {res['b_class']}' style='font-size:14px;'>{res['msg']}</div>
+                    <div style='color:#8b949e; font-size:12px; margin-top:5px;'>Demand: {res['d_z']}</div>
+                </div>
+                <div style='flex:2; text-align:right;'>
+                    <p class='tgt-text'>TGT: {res['t']}</p>
+                    <p class='sl-text'>SL: {res['ema']}</p>
+                    <p style='font-size:12px; color:#8b949e;'>RSI: {res['rsi']}</p>
+                </div>
+            </div>
+        </div>
+        """, unsafe_allow_html=True)
 
 time.sleep(30)
 st.rerun()
