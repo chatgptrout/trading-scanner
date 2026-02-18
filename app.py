@@ -50,23 +50,31 @@ with col_t1:
 with col_t2:
     st.markdown(f"<div class='live-clock'>⏰ {get_ist_time()}</div>", unsafe_allow_html=True)
 
-# --- INDEX STATUS WITH BULLISH MESSAGE ---
-st.markdown("### 🎯 INDEX STATUS")
-c1, c2 = st.columns(2)
-indices = {"NIFTY": "^NSEI", "BANKNIFTY": "^NSEBANK"}
+# --- 1. INDEX & COMMODITY STATUS (Nifty, BankNifty, Crude, NG) ---
+st.markdown("### 🎯 MARKET STATUS")
+c1, c2, c3, c4 = st.columns(4)
+# Symbols for Nifty, BankNifty, Crude Oil (CL=F), Natural Gas (NG=F)
+m_indices = {
+    "NIFTY": "^NSEI", 
+    "BANKNIFTY": "^NSEBANK",
+    "CRUDE OIL": "CL=F",
+    "NATURAL GAS": "NG=F"
+}
 
-for i, (name, sym) in enumerate(indices.items()):
+for i, (name, sym) in enumerate(m_indices.items()):
     res = get_market_data(sym)
     if res:
         msg = "BULLISH ABOVE" if res['s'] == "BUY" else "BEARISH BELOW"
-        with (c1 if i==0 else c2):
+        # Display in 4 columns
+        target_col = [c1, c2, c3, c4][i]
+        with target_col:
             st.markdown(f"""<div class='compact-card' style='border-left-color:{res['c']};'>
-                <h2 style='margin:0;'>{name}</h2>
+                <h3 style='margin:0;'>{name}</h3>
                 <p class='price-bold'>{res['p']}</p>
-                <p style='font-weight:bold; color:{res['c']}; font-size:18px;'>{msg} {res['sl']}</p>
+                <p style='font-weight:bold; color:{res['c']}; font-size:14px;'>{msg} {res['sl']}</p>
             </div>""", unsafe_allow_html=True)
 
-# --- AUTOMATIC BTST SCANNER ---
+# --- 2. AUTOMATIC BTST SCANNER ---
 st.markdown("### 🌙 BTST / STBT TOP PICKS")
 NIFTY_100 = ["RELIANCE.NS", "HDFCBANK.NS", "ADANIENT.NS", "SBIN.NS", "BHARATFORG.NS", "TATAMOTORS.NS", "TCS.NS", "ICICIBANK.NS", "INFY.NS", "JSWSTEEL.NS", "AXISBANK.NS", "BAJFINANCE.NS", "LT.NS", "ITC.NS", "BHARTIARTL.NS"]
 
@@ -90,7 +98,7 @@ if btst_list:
 
 st.divider()
 
-# --- NIFTY 100 SCANNER ---
+# --- 3. NIFTY 100 LIVE SCANNER ---
 st.markdown("### 🔥 NIFTY 100 LIVE SCANNER")
 for s_sym, res in stock_results:
     star = "⭐ " if s_sym in QUALITY_LIST else ""
