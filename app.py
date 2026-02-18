@@ -3,155 +3,88 @@ import yfinance as yf
 from datetime import datetime
 import time
 import pytz 
-import pandas as pd
 
-st.set_page_config(page_title="TRADEX LIVE TERMINAL", layout="wide")
+st.set_page_config(page_title="TRADEX MOBILE V6", layout="centered")
 
-# --- CUSTOM CSS ---
+# --- ULTIMATE MOBILE CSS ---
 st.markdown("""
     <style>
-    .live-clock { font-size: 35px; font-weight: 900; color: #d32f2f; text-align: right; font-family: 'Courier New', monospace; }
-    .ticker-wrap { width: 100%; overflow: hidden; background-color: #1a237e; color: white; padding: 10px 0; font-weight: bold; margin-bottom: 20px; }
-    .ticker { display: inline-block; white-space: nowrap; animation: ticker 30s linear infinite; }
-    @keyframes ticker { 0% { transform: translateX(100%); } 100% { transform: translateX(-100%); } }
-    .compact-card { background: white; border-radius: 8px; padding: 12px 18px; margin-bottom: 6px; border-left: 10px solid #1a237e; box-shadow: 0 2px 5px rgba(0,0,0,0.1); }
-    .stock-name { font-size: 28px !important; font-weight: 900; color: #1a237e; margin: 0; }
-    .price-bold { font-size: 32px !important; font-weight: 900; color: #000; margin: 0; }
-    .signal-label { padding: 6px 12px; border-radius: 4px; font-size: 16px; font-weight: 900; color: white; text-align: center; }
-    .bg-buy { background-color: #2e7d32; }
-    .bg-sell { background-color: #c62828; }
-    .btst-card { background: #f3e5f5; border: 2px solid #4a148c; border-radius: 10px; padding: 15px; margin-bottom: 20px; }
-    .commodity-alert { background: #fff3e0; border: 2px dashed #ef6c00; border-radius: 10px; padding: 15px; margin-bottom: 20px; }
-    .zone-safe { color: #2e7d32; font-weight: bold; font-size: 14px; }
-    .zone-risky { color: #ef6c00; font-weight: bold; font-size: 14px; }
-    .rsi-tag { font-size: 12px; font-weight: bold; color: #555; }
+    .stApp { background-color: #fdfdfd; }
+    .mobile-clock { font-size: 32px; font-weight: 900; color: #ff5252; text-align: center; border-bottom: 2px solid #eee; padding-bottom: 10px; margin-bottom: 15px; }
+    
+    /* Index & Commodity Cards */
+    .mobile-card { background: white; border-radius: 12px; padding: 15px; margin-bottom: 10px; border-left: 8px solid #1a237e; box-shadow: 0 4px 6px rgba(0,0,0,0.05); }
+    .price-large { font-size: 26px; font-weight: 900; color: #212121; margin: 5px 0; }
+    .bull-level { font-size: 11px; font-weight: 900; text-transform: uppercase; }
+
+    /* BTST Special Design */
+    .btst-container { background: #fff9c4; border: 2px solid #fbc02d; border-radius: 15px; padding: 15px; margin: 20px 0; }
+    .btst-card { background: white; border-radius: 10px; padding: 12px; margin-top: 10px; border-right: 8px solid #fbc02d; display: flex; justify-content: space-between; align-items: center; }
+    
+    /* Scanner Style */
+    .scanner-row { background: white; border-radius: 12px; padding: 15px; margin-bottom: 10px; border-left: 10px solid #2e7d32; }
     </style>
     """, unsafe_allow_html=True)
 
-# --- RSI CALCULATION FUNCTION ---
-def calculate_rsi(data, window=14):
-    delta = data.diff()
-    gain = (delta.where(delta > 0, 0)).rolling(window=window).mean()
-    loss = (-delta.where(delta < 0, 0)).rolling(window=window).mean()
-    rs = gain / loss
-    return 100 - (100 / (1 + rs))
-
-# --- FUNCTIONS ---
-def get_ist_time():
-    IST = pytz.timezone('Asia/Kolkata')
-    return datetime.now(IST).strftime("%H:%M:%S")
-
-def get_market_data(ticker):
+def get_data(ticker):
     try:
-        df = yf.Ticker(ticker).history(period="5d", interval="15m")
+        df = yf.Ticker(ticker).history(period="2d", interval="15m")
         if df.empty: return None
         cp = round(df['Close'].iloc[-1], 2)
         ema = round(df['Close'].ewm(span=20, adjust=False).mean().iloc[-1], 2)
-        
-        # Calculate RSI
-        df['RSI'] = calculate_rsi(df['Close'])
-        current_rsi = round(df['RSI'].iloc[-1], 2)
-        
-        status = "BUY" if cp > ema else "SELL"
-        bg = "bg-buy" if cp > ema else "bg-sell"
-        color = "#2e7d32" if cp > ema else "#c62828"
-        
-        is_safe = "✅ SAFE ENTRY" if abs(cp - ema) / ema < 0.003 else "⚠️ PRICE TOO HIGH"
-        zone_class = "zone-safe" if "SAFE" in is_safe else "zone-risky"
-        
-        # RSI Analysis
-        rsi_msg = "NORMAL"
-        if current_rsi > 70: rsi_msg = "🔥 OVERBOUGHT"
-        elif current_rsi < 30: rsi_msg = "❄️ OVERSOLD"
-        
-        diff = cp * 0.007
-        return {"p": cp, "s": status, "t": round(cp + (diff if cp > ema else -diff), 2), "sl": ema, "bg": bg, "c": color, "zone": is_safe, "z_cls": zone_class, "rsi": current_rsi, "rsi_m": rsi_msg}
+        delta = df['Close'].diff()
+        gain = (delta.where(delta > 0, 0)).rolling(14).mean()
+        loss = (-delta.where(delta < 0, 0)).rolling(14).mean()
+        rs = gain / loss
+        rsi = round(100 - (100 / (1 + rs)).iloc[-1], 2)
+        return {"p": cp, "ema": ema, "rsi": rsi, "status": "BULLISH" if cp > ema else "BEARISH"}
     except: return None
 
-QUALITY_LIST = ["ITC.NS", "RELIANCE.NS", "HDFCBANK.NS", "TCS.NS", "INFY.NS", "ICICIBANK.NS", "SBIN.NS"]
+# --- UI RENDER ---
+st.markdown(f"<div class='mobile-clock'>🚀 {datetime.now(pytz.timezone('Asia/Kolkata')).strftime('%H:%M:%S')}</div>", unsafe_allow_html=True)
 
-# --- HEADER ---
-col_t1, col_t2 = st.columns([2, 1])
-with col_t1:
-    st.markdown("<h1 style='margin:0;'>🚀 TRADEX MEGA TERMINAL</h1>", unsafe_allow_html=True)
-with col_t2:
-    st.markdown(f"<div class='live-clock'>⏰ {get_ist_time()}</div>", unsafe_allow_html=True)
-
-# --- 1. MARKET STATUS (Nifty, BankNifty, Crude, NG) ---
-st.markdown("### 🎯 MARKET STATUS")
-c1, c2, c3, c4 = st.columns(4)
-m_indices = {"NIFTY": "^NSEI", "BANKNIFTY": "^NSEBANK", "CRUDE OIL": "CL=F", "NATURAL GAS": "NG=F"}
-
-for i, (name, sym) in enumerate(m_indices.items()):
-    res = get_market_data(sym)
+# 1. INDEX STATUS
+assets = {"NIFTY": "^NSEI", "SENSEX": "^BSESN", "CRUDE": "CL=F", "NAT. GAS": "NG=F"}
+results = {}
+cols = st.columns(2)
+for i, (name, sym) in enumerate(assets.items()):
+    res = get_data(sym)
+    results[name] = res
     if res:
-        msg = "BULLISH ABOVE" if res['s'] == "BUY" else "BEARISH BELOW"
-        target_col = [c1, c2, c3, c4][i]
-        with target_col:
-            st.markdown(f"""<div class='compact-card' style='border-left-color:{res['c']};'>
-                <h3 style='margin:0;'>{name}</h3>
-                <p class='price-bold'>{res['p']}</p>
-                <p style='font-weight:bold; color:{res['c']}; font-size:14px;'>{msg} {res['sl']}</p>
-                <p class='{res['z_cls']}'>{res['zone']}</p>
-                <p class='rsi-tag'>RSI: {res['rsi']} ({res['rsi_m']})</p>
+        color = "#2e7d32" if res['status'] == "BULLISH" else "#c62828"
+        label = "BULLISH ABOVE" if res['status'] == "BULLISH" else "BEARISH BELOW"
+        with cols[i % 2]:
+            st.markdown(f"""<div class='mobile-card' style='border-left-color:{color};'>
+                <div style='font-size:12px; font-weight:bold; color:#757575;'>{name}</div>
+                <div class='price-large'>{res['p']}</div>
+                <div class='bull-level' style='color:{color};'>{label} {res['ema']}</div>
             </div>""", unsafe_allow_html=True)
 
-# --- 2. EVENING BREAKOUT RADAR (STILL HERE!) ---
-st.markdown(f"""
-    <div class='commodity-alert'>
-        <h4 style='color:#ef6c00; margin:0;'>🌙 EVENING BREAKOUT RADAR (ACTIVE)</h4>
-        <p style='margin:0; font-size:14px;'>US Market opens soon. Focus on RSI for better confirmation.</p>
-    </div>
-    """, unsafe_allow_html=True)
-
-# --- 3. AUTOMATIC BTST SCANNER ---
-st.markdown("### 🌙 BTST / STBT TOP PICKS")
-NIFTY_100 = ["RELIANCE.NS", "HDFCBANK.NS", "ADANIENT.NS", "SBIN.NS", "BHARATFORG.NS", "TATAMOTORS.NS", "TCS.NS", "ICICIBANK.NS", "INFY.NS", "JSWSTEEL.NS", "AXISBANK.NS", "BAJFINANCE.NS", "LT.NS", "ITC.NS", "BHARTIARTL.NS"]
-
-btst_list = []
-stock_results = []
-for s_sym in NIFTY_100:
-    res = get_market_data(s_sym)
+# 2. RADAR SIGNALS
+st.markdown("### 🔥 RADAR SIGNALS")
+for name, strike in [("NIFTY", "25800 CE"), ("SENSEX", "83700 CE")]:
+    res = results.get(name)
     if res:
-        stock_results.append((s_sym, res))
-        if res['s'] == "BUY":
-            star = "⭐" if s_sym in QUALITY_LIST else ""
-            btst_list.append((f"{star}{s_sym.split('.')[0]}", res))
+        bg = "#ffebee" if res['rsi'] > 80 else "#e3f2fd"
+        border = "#ff5252" if res['rsi'] > 80 else "#1565c0"
+        msg = f"BUY ABOVE: {res['p']} 👁️🙏" if res['rsi'] <= 80 else "🚨 CRITICAL RSI"
+        st.markdown(f"<div style='background:{bg}; border-left:8px solid {border}; border-radius:8px; padding:15px; margin-bottom:10px;'><b>{strike}</b><br>{msg}</div>", unsafe_allow_html=True)
 
-if btst_list:
-    b_col1, b_col2 = st.columns(2)
-    for i in range(min(2, len(btst_list))):
-        name, data = btst_list[i]
-        with (b_col1 if i==0 else b_col2):
-            st.markdown(f"""<div class='btst-card'>
-                <h2 style='color:#4a148c; margin:0;'>✨ {name} - BTST</h2>
-                <p class='price-bold'>Entry: {data['p']} | Tgt: {data['t']}</p>
-                <p class='{data['z_cls']}'>{data['zone']}</p>
-                <p class='rsi-tag'>RSI: {data['rsi']} ({data['rsi_m']})</p>
-            </div>""", unsafe_allow_html=True)
+# 3. LIVE SCANNER
+st.markdown("### 📊 LIVE SCANNER")
+for sym in ["RELIANCE.NS", "HDFCBANK.NS", "ADANIENT.NS"]:
+    res = get_data(sym)
+    if res:
+        color = "#2e7d32" if res['status']=="BULLISH" else "#c62828"
+        st.markdown(f"""<div class='scanner-row' style='border-left-color:{color};'><div style='display:flex; justify-content:space-between;'><div><b>⭐ {sym.split('.')[0]}</b><br><span class='price-large'>₹{res['p']}</span></div><div style='text-align:right;'><span style='color:#2e7d32; font-weight:900;'>T: {round(res['p']*1.007, 2)}</span><br><span style='color:#c62828; font-weight:900;'>S: {res['ema']}</span></div></div></div>""", unsafe_allow_html=True)
 
-st.divider()
-
-# --- 4. NIFTY 100 LIVE SCANNER ---
-st.markdown("### 🔥 NIFTY 100 LIVE SCANNER")
-for s_sym, res in stock_results:
-    star = "⭐ " if s_sym in QUALITY_LIST else ""
-    st.markdown(f"""
-    <div class='compact-card' style='border-left-color:{res['c']};'>
-        <div style='display:flex; justify-content:space-between; align-items:center;'>
-            <div style='flex:2;'>
-                <p class='stock-name'>{star}{s_sym.split('.')[0]}</p>
-                <p class='price-bold'>₹{res['p']}</p>
-                <p class='{res['z_cls']}'>{res['zone']}</p>
-                <p class='rsi-tag'>RSI: {res['rsi']} ({res['rsi_m']})</p>
-            </div>
-            <div style='flex:1;'><div class='signal-label {res['bg']}'>{res['s']}</div></div>
-            <div style='flex:2; text-align:right;'>
-                <p style='color:#2e7d32; font-weight:bold; margin:0;'>TGT: {res['t']}</p>
-                <p style='color:#c62828; font-weight:bold; margin:0;'>SL: {res['sl']}</p>
-            </div>
-        </div>
-    </div>""", unsafe_allow_html=True)
+# 4. BTST SECTION
+st.markdown("<div class='btst-container'><h3 style='margin:0; color:#1a237e;'>💰 BTST / SWING ALERTS</h3>", unsafe_allow_html=True)
+for sym in ["TCS.NS", "ICICIBANK.NS"]:
+    res = get_data(sym)
+    if res and res['status'] == "BULLISH":
+        st.markdown(f"""<div class='btst-card'><div><b>🚀 {sym.split('.')[0]}</b><br><span style='font-size:11px; color:#757575;'>Potential BTST Pick</span></div><div style='text-align:right;'><b>₹{res['p']}</b><br><span style='color:#2e7d32; font-size:11px; font-weight:bold;'>MODE: STRONG</span></div></div>""", unsafe_allow_html=True)
+st.markdown("</div>", unsafe_allow_html=True)
 
 time.sleep(30)
 st.rerun()
