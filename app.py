@@ -20,6 +20,7 @@ st.markdown("""
     .bg-buy { background-color: #2e7d32; }
     .bg-sell { background-color: #c62828; }
     .btst-card { background: #f3e5f5; border: 2px solid #4a148c; border-radius: 10px; padding: 15px; margin-bottom: 20px; }
+    .commodity-alert { background: #fff3e0; border: 2px dashed #ef6c00; border-radius: 10px; padding: 15px; margin-bottom: 20px; }
     .zone-safe { color: #2e7d32; font-weight: bold; font-size: 14px; }
     .zone-risky { color: #ef6c00; font-weight: bold; font-size: 14px; }
     </style>
@@ -39,8 +40,8 @@ def get_market_data(ticker):
         status = "BUY" if cp > ema else "SELL"
         bg = "bg-buy" if cp > ema else "bg-sell"
         color = "#2e7d32" if cp > ema else "#c62828"
-        # Safe Zone logic: Price within 0.3% of breakout level
-        is_safe = "✅ SAFE ENTRY" if abs(cp - ema) / ema < 0.003 else "⚠️ PRICE TOO HIGH (Wait)"
+        # Safe Entry logic
+        is_safe = "✅ SAFE ENTRY" if abs(cp - ema) / ema < 0.003 else "⚠️ PRICE TOO HIGH"
         zone_class = "zone-safe" if "SAFE" in is_safe else "zone-risky"
         diff = cp * 0.007
         return {"p": cp, "s": status, "t": round(cp + (diff if cp > ema else -diff), 2), "sl": ema, "bg": bg, "c": color, "zone": is_safe, "z_cls": zone_class}
@@ -73,13 +74,20 @@ for i, (name, sym) in enumerate(m_indices.items()):
                 <p class='{res['z_cls']}'>{res['zone']}</p>
             </div>""", unsafe_allow_html=True)
 
-# --- 2. AUTOMATIC BTST SCANNER ---
+# --- 2. EVENING BREAKOUT RADAR (IT'S BACK!) ---
+st.markdown(f"""
+    <div class='commodity-alert'>
+        <h4 style='color:#ef6c00; margin:0;'>🌙 EVENING BREAKOUT RADAR (ACTIVE)</h4>
+        <p style='margin:0; font-size:14px;'>US Market opens soon. Current Crude Price: {get_market_data('CL=F')['p'] if get_market_data('CL=F') else 'Loading...'}</p>
+    </div>
+    """, unsafe_allow_html=True)
+
+# --- 3. AUTOMATIC BTST SCANNER ---
 st.markdown("### 🌙 BTST / STBT TOP PICKS")
 NIFTY_100 = ["RELIANCE.NS", "HDFCBANK.NS", "ADANIENT.NS", "SBIN.NS", "BHARATFORG.NS", "TATAMOTORS.NS", "TCS.NS", "ICICIBANK.NS", "INFY.NS", "JSWSTEEL.NS", "AXISBANK.NS", "BAJFINANCE.NS", "LT.NS", "ITC.NS", "BHARTIARTL.NS"]
 
 btst_list = []
 stock_results = []
-
 for s_sym in NIFTY_100:
     res = get_market_data(s_sym)
     if res:
@@ -101,7 +109,7 @@ if btst_list:
 
 st.divider()
 
-# --- 3. NIFTY 100 LIVE SCANNER ---
+# --- 4. NIFTY 100 LIVE SCANNER ---
 st.markdown("### 🔥 NIFTY 100 LIVE SCANNER")
 for s_sym, res in stock_results:
     star = "⭐ " if s_sym in QUALITY_LIST else ""
