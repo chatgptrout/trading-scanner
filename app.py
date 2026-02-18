@@ -10,7 +10,8 @@ st.set_page_config(page_title="TRADEX MEGA TERMINAL", layout="wide")
 # --- CUSTOM CSS ---
 st.markdown("""
     <style>
-    .live-clock { font-size: 35px; font-weight: 900; color: #d32f2f; text-align: right; }
+    /* Clock Style Restored */
+    .live-clock { font-size: 35px; font-weight: 900; color: #d32f2f; text-align: right; font-family: 'Courier New', monospace; }
     .buy-card { background: #e8f5e9; border: 3px solid #2e7d32; border-radius: 8px; padding: 15px; margin-bottom: 8px; }
     .danger-card { background: #ffebee; border: 3px solid #c62828; border-radius: 8px; padding: 15px; margin-bottom: 8px; animation: blinker 1.5s linear infinite; }
     .compact-card { background: white; border-radius: 8px; padding: 15px; margin-bottom: 8px; border-left: 10px solid #1a237e; box-shadow: 0 2px 5px rgba(0,0,0,0.1); }
@@ -22,11 +23,14 @@ st.markdown("""
     .buy-level { font-size: 18px; font-weight: 900; color: #1565c0; margin: 0; }
     .tgt-text { color: #2e7d32 !important; font-weight: 900; margin: 0; font-size: 16px; }
     .sl-text { color: #c62828 !important; font-weight: 900; margin: 0; font-size: 16px; }
-    .btst-card { background: #f3e5f5; border: 2px solid #4a148c; border-radius: 10px; padding: 15px; margin-bottom: 20px; }
     </style>
     """, unsafe_allow_html=True)
 
 # --- FUNCTIONS ---
+def get_ist_time():
+    IST = pytz.timezone('Asia/Kolkata')
+    return datetime.now(IST).strftime("%H:%M:%S")
+
 def calculate_rsi(data, window=14):
     delta = data.diff()
     gain = (delta.where(delta > 0, 0)).rolling(window=window).mean()
@@ -36,7 +40,6 @@ def calculate_rsi(data, window=14):
 
 def get_market_data(ticker):
     try:
-        # Fixed the bracket error here
         df = yf.Ticker(ticker).history(period="5d", interval="15m")
         if df.empty: return None
         cp = round(df['Close'].iloc[-1], 2)
@@ -63,17 +66,18 @@ def get_atm_strike(price, base=100):
 
 QUALITY_LIST = ["ITC.NS", "RELIANCE.NS", "HDFCBANK.NS", "TCS.NS", "INFY.NS", "ICICIBANK.NS", "SBIN.NS"]
 
-# --- HEADER ---
-IST = pytz.timezone('Asia/Kolkata')
-st.markdown(f"<div class='live-clock'>⏰ {datetime.now(IST).strftime('%H:%M:%S')}</div>", unsafe_allow_html=True)
-st.markdown("<h1>🚀 TRADEX MEGA TERMINAL</h1>", unsafe_allow_html=True)
+# --- HEADER WITH CLOCK ---
+col_t1, col_t2 = st.columns([2, 1])
+with col_t1:
+    st.markdown("<h1 style='margin:0;'>🚀 TRADEX MEGA TERMINAL</h1>", unsafe_allow_html=True)
+with col_t2:
+    st.markdown(f"<div class='live-clock'>⏰ {get_ist_time()}</div>", unsafe_allow_html=True)
 
 # --- 1. MARKET STATUS ---
 st.markdown("### 🎯 INDEX & COMMODITY STATUS")
 m_cols = st.columns(5)
 assets = {"SENSEX": "^BSESN", "NIFTY": "^NSEI", "CRUDE OIL": "CL=F", "NATURAL GAS": "NG=F", "GOLD": "GC=F"}
 results = {}
-
 for i, (name, sym) in enumerate(assets.items()):
     res = get_market_data(sym)
     results[name] = res
@@ -96,17 +100,7 @@ display_option("SENSEX", results.get("SENSEX"), o_cols[0], 100)
 display_option("NIFTY", results.get("NIFTY"), o_cols[1], 50)
 display_option("CRUDE", results.get("CRUDE OIL"), o_cols[2], 50)
 
-# --- 3. BTST / STBT TOP PICKS ---
-st.markdown("### 🌙 BTST / STBT TOP PICKS")
-BTST_STOCKS = ["RELIANCE.NS", "SBIN.NS"]
-b_col1, b_col2 = st.columns(2)
-for i, sym in enumerate(BTST_STOCKS):
-    res = get_market_data(sym)
-    if res and res['s'] == "BUY":
-        with (b_col1 if i==0 else b_col2):
-            st.markdown(f"<div class='btst-card'><h2>✨ {sym.split('.')[0]} - BTST</h2><p class='price-bold'>Entry: {res['p']} | Tgt: {res['t']}</p></div>", unsafe_allow_html=True)
-
-# --- 4. NIFTY 100 LIVE SCANNER ---
+# --- 3. NIFTY 100 LIVE SCANNER ---
 st.markdown("### 🔥 NIFTY 100 LIVE SCANNER")
 NIFTY_100 = ["RELIANCE.NS", "HDFCBANK.NS", "ADANIENT.NS", "SBIN.NS", "BHARATFORG.NS", "TCS.NS", "ICICIBANK.NS", "INFY.NS"]
 for sym in NIFTY_100:
