@@ -41,8 +41,6 @@ def get_market_data(ticker):
         return {"p": cp, "s": status, "t": round(cp + (diff if cp > ema else -diff), 2), "sl": ema, "bg": bg, "c": color}
     except: return None
 
-# --- QUALITY STOCKS LIST ---
-# In stocks ke naam ke aage Star dikhega
 QUALITY_LIST = ["ITC.NS", "RELIANCE.NS", "HDFCBANK.NS", "TCS.NS", "INFY.NS", "ICICIBANK.NS", "SBIN.NS"]
 
 # --- HEADER ---
@@ -52,22 +50,23 @@ with col_t1:
 with col_t2:
     st.markdown(f"<div class='live-clock'>⏰ {get_ist_time()}</div>", unsafe_allow_html=True)
 
-st.markdown("""<div class="ticker-wrap"><div class="ticker">📢 MARKET UPDATE: High Quality Stocks marked with ⭐ | 🔥 Auto-Refresh Active...</div></div>""", unsafe_allow_html=True)
-
-# --- 1. INDEX STATUS ---
+# --- INDEX STATUS WITH BULLISH MESSAGE ---
 st.markdown("### 🎯 INDEX STATUS")
 c1, c2 = st.columns(2)
-for i, (name, sym) in enumerate({"NIFTY": "^NSEI", "BANKNIFTY": "^NSEBANK"}.items()):
+indices = {"NIFTY": "^NSEI", "BANKNIFTY": "^NSEBANK"}
+
+for i, (name, sym) in enumerate(indices.items()):
     res = get_market_data(sym)
     if res:
+        msg = "BULLISH ABOVE" if res['s'] == "BUY" else "BEARISH BELOW"
         with (c1 if i==0 else c2):
             st.markdown(f"""<div class='compact-card' style='border-left-color:{res['c']};'>
                 <h2 style='margin:0;'>{name}</h2>
                 <p class='price-bold'>{res['p']}</p>
-                <p style='font-weight:bold; color:{res['c']};'>{res['s']} ABOVE {res['sl']}</p>
+                <p style='font-weight:bold; color:{res['c']}; font-size:18px;'>{msg} {res['sl']}</p>
             </div>""", unsafe_allow_html=True)
 
-# --- 2. AUTOMATIC BTST SCANNER ---
+# --- AUTOMATIC BTST SCANNER ---
 st.markdown("### 🌙 BTST / STBT TOP PICKS")
 NIFTY_100 = ["RELIANCE.NS", "HDFCBANK.NS", "ADANIENT.NS", "SBIN.NS", "BHARATFORG.NS", "TATAMOTORS.NS", "TCS.NS", "ICICIBANK.NS", "INFY.NS", "JSWSTEEL.NS", "AXISBANK.NS", "BAJFINANCE.NS", "LT.NS", "ITC.NS", "BHARTIARTL.NS"]
 
@@ -79,7 +78,6 @@ for s_sym in NIFTY_100:
     if res:
         stock_results.append((s_sym, res))
         if res['s'] == "BUY":
-            # BTST mein bhi Star check karenge
             star = "⭐" if s_sym in QUALITY_LIST else ""
             btst_list.append((f"{star}{s_sym.split('.')[0]}", res))
 
@@ -92,10 +90,9 @@ if btst_list:
 
 st.divider()
 
-# --- 3. NIFTY 100 LIVE SCANNER WITH GOLD STAR ---
+# --- NIFTY 100 SCANNER ---
 st.markdown("### 🔥 NIFTY 100 LIVE SCANNER")
 for s_sym, res in stock_results:
-    # Yahan Star logic kaam karegi
     star = "⭐ " if s_sym in QUALITY_LIST else ""
     st.markdown(f"""
     <div class='compact-card' style='border-left-color:{res['c']};'>
