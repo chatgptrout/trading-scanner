@@ -3,79 +3,123 @@ import yfinance as yf
 from datetime import datetime
 import time
 import pytz 
+import pandas as pd
 
-st.set_page_config(page_title="TRADEX MOBILE V6", layout="centered")
+st.set_page_config(page_title="TRADEX MEGA TERMINAL", layout="wide")
 
-# --- MOBILE CSS (With BTST Glow) ---
+# --- CUSTOM CSS ---
 st.markdown("""
     <style>
-    .stApp { background-color: #f8f9fa; }
-    .mobile-clock { font-size: 30px; font-weight: 900; color: #ff5252; text-align: center; padding-bottom: 10px; border-bottom: 2px solid #eee; }
-    .mobile-card { background: white; border-radius: 12px; padding: 15px; margin-bottom: 12px; border-left: 8px solid #1a237e; box-shadow: 0 4px 6px rgba(0,0,0,0.05); }
-    .price-large { font-size: 26px; font-weight: 900; color: #212121; margin: 5px 0; }
-    
-    /* BTST Special Design */
-    .btst-container { background: #fff9c4; border: 2px solid #fbc02d; border-radius: 15px; padding: 15px; margin: 20px 0; }
-    .btst-card { background: white; border-radius: 10px; padding: 12px; margin-top: 10px; border-right: 8px solid #fbc02d; display: flex; justify-content: space-between; align-items: center; }
+    .live-clock { font-size: 35px; font-weight: 900; color: #d32f2f; text-align: right; }
+    .compact-card { background: white; border-radius: 8px; padding: 15px; margin-bottom: 8px; border-left: 10px solid #1a237e; box-shadow: 0 2px 5px rgba(0,0,0,0.1); }
+    .stock-name { font-size: 24px !important; font-weight: 900; color: #1a237e; margin: 0; }
+    .price-bold { font-size: 26px !important; font-weight: 900; color: #000; margin: 0; }
+    .signal-label { padding: 6px 12px; border-radius: 4px; font-size: 14px; font-weight: 900; color: white; text-align: center; width: 85px; }
+    .option-card { background: #e3f2fd; border: 2px solid #1565c0; border-radius: 10px; padding: 12px; margin-bottom: 10px; display: flex; justify-content: space-between; align-items: center; }
+    .buy-level { font-size: 18px; font-weight: 900; color: #1565c0; margin: 0; }
+    .tgt-text { color: #2e7d32 !important; font-weight: 900; margin: 0; font-size: 16px; }
+    .sl-text { color: #c62828 !important; font-weight: 900; margin: 0; font-size: 16px; }
+    .level-msg { font-size: 14px; font-weight: 900; margin-top: 2px; margin-bottom: 2px; }
     </style>
     """, unsafe_allow_html=True)
 
-def get_data(ticker):
+# --- FUNCTIONS ---
+def calculate_rsi(data, window=14):
+    delta = data.diff()
+    gain = (delta.where(delta > 0, 0)).rolling(window=window).mean()
+    loss = (-delta.where(delta < 0, 0)).rolling(window=window).mean()
+    rs = gain / loss
+    return 100 - (100 / (1 + rs))
+
+def get_market_data(ticker):
     try:
-        df = yf.Ticker(ticker).history(period="2d", interval="15m")
+        df = yf.Ticker(ticker).history(period="5d", interval="15m")
         if df.empty: return None
         cp = round(df['Close'].iloc[-1], 2)
         ema = round(df['Close'].ewm(span=20, adjust=False).mean().iloc[-1], 2)
-        
-        delta = df['Close'].diff()
-        gain = (delta.where(delta > 0, 0)).rolling(14).mean()
-        loss = (-delta.where(delta < 0, 0)).rolling(14).mean()
-        rs = gain / loss
-        rsi = round(100 - (100 / (1 + rs)).iloc[-1], 2)
-        
-        return {"p": cp, "ema": ema, "rsi": rsi, "status": "BULLISH" if cp > ema else "BEARISH"}
+        is_sw = abs(cp - ema) / ema < 0.001
+        status = "SIDEWAYS" if is_sw else ("BUY" if cp > ema else "SELL")
+        df['RSI'] = calculate_rsi(df['Close'])
+        rsi_val = round(df['RSI'].iloc[-1], 2)
+        is_safe = "✅ SAFE ENTRY" if abs(cp - ema) / ema < 0.003 else "⚠️ PRICE TOO HIGH"
+        diff = cp * 0.007
+        return {"p": cp, "s": status, "t": round(cp + (diff if cp > ema else -diff), 2), "sl": ema, 
+                "c": "#9e9e9e" if is_sw else ("#2e7d32" if cp > ema else "#c62828"), 
+                "zone": is_safe, "rsi": rsi_val, "sw": is_sw}
     except: return None
 
-# --- UI RENDER ---
-st.markdown(f"<div class='mobile-clock'>🚀 {datetime.now(pytz.timezone('Asia/Kolkata')).strftime('%H:%M:%S')}</div>", unsafe_allow_html=True)
+def get_atm_strike(price, base=100):
+    return int(base * round(price / base))
 
-# 1. INDEX STATUS
-assets = {"NIFTY": "^NSEI", "SENSEX": "^BSESN", "CRUDE": "CL=F", "NAT. GAS": "NG=F"}
+QUALITY_LIST = ["ITC.NS", "RELIANCE.NS", "HDFCBANK.NS", "TCS.NS", "INFY.NS", "ICICIBANK.NS", "SBIN.NS"]
+
+# --- HEADER ---
+IST = pytz.timezone('Asia/Kolkata')
+st.markdown(f"<div class='live-clock'>⏰ {datetime.now(IST).strftime('%H:%M:%S')}</div>", unsafe_allow_html=True)
+st.markdown("<h1>🚀 TRADEX MEGA TERMINAL</h1>", unsafe_allow_html=True)
+
+# --- 1. MARKET STATUS (Levels Restored) ---
+st.markdown("### 🎯 INDEX & COMMODITY STATUS")
+m_cols = st.columns(5)
+assets = {"SENSEX": "^BSESN", "NIFTY": "^NSEI", "CRUDE OIL": "CL=F", "NATURAL GAS": "NG=F", "GOLD": "GC=F"}
 results = {}
-cols = st.columns(2)
+
 for i, (name, sym) in enumerate(assets.items()):
-    res = get_data(sym)
+    res = get_market_data(sym)
     results[name] = res
     if res:
-        color = "#2e7d32" if res['status'] == "BULLISH" else "#c62828"
-        with cols[i % 2]:
-            st.markdown(f"<div class='mobile-card' style='border-left-color:{color};'><div style='font-size:13px; font-weight:bold; color:#757575;'>{name}</div><div class='price-large'>{res['p']}</div><div style='font-size:11px; color:{color}; font-weight:bold;'>{res['status']} {res['ema']}</div></div>", unsafe_allow_html=True)
+        msg = "BULLISH ABOVE" if res['s'] == "BUY" else "BEARISH BELOW"
+        if res['sw']: msg = "SIDEWAYS"
+        with m_cols[i]:
+            st.markdown(f"""<div class='compact-card' style='border-left-color:{res['c']};'>
+                <h4 style='margin:0;'>{name}</h4>
+                <p class='price-bold'>{res['p']}</p>
+                <p class='level-msg' style='color:{res['c']};'>{msg} {res['sl']}</p>
+                <p style='font-size:12px; color:#666; margin:0;'>RSI: {res['rsi']}</p>
+            </div>""", unsafe_allow_html=True)
 
-# 2. RADAR
-st.markdown("### 🔥 RADAR SIGNALS")
-for name, strike in [("NIFTY", "25800 CE"), ("SENSEX", "83700 CE")]:
-    res = results.get(name)
+# --- 2. STRIKE PRICE RADAR ---
+st.markdown("### 🔥 STRIKE PRICE RADAR (AUTO-SIGNALS)")
+o_cols = st.columns(3)
+def display_option(name, res, col, base=100):
     if res:
-        style = "background:#e3f2fd; border-left:8px solid #1565c0; border-radius:8px; padding:15px; margin-bottom:10px;"
-        if res['rsi'] > 80: style = "background:#ffebee; border-left:8px solid #ff5252; border-radius:8px; padding:15px; margin-bottom:10px; color:#c62828;"
-        msg = f"BUY ABOVE: {res['p']} 👁️🙏" if res['rsi'] <= 80 else "🚨 CRITICAL RSI"
-        st.markdown(f"<div style='{style}'><b>{strike}</b><br>{msg}</div>", unsafe_allow_html=True)
+        with col:
+            if res['sw']: st.markdown(f"<div class='option-card' style='background:#f5f5f5; border-color:#9e9e9e;'><b>{name} SIDEWAYS</b></div>", unsafe_allow_html=True)
+            elif res['s'] == "BUY":
+                strike = get_atm_strike(res['p'], base)
+                st.markdown(f"<div class='option-card'><div><b>{name} {strike} CE</b></div><div class='buy-level'>BUY ABOVE: {res['p']} 👁️🙏</div></div>", unsafe_allow_html=True)
 
-# 3. LIVE SCANNER
-st.markdown("### 📊 LIVE SCANNER")
-for sym in ["RELIANCE.NS", "HDFCBANK.NS", "ADANIENT.NS"]:
-    res = get_data(sym)
+display_option("SENSEX", results.get("SENSEX"), o_cols[0], 100)
+display_option("NIFTY", results.get("NIFTY"), o_cols[1], 50)
+display_option("CRUDE", results.get("CRUDE OIL"), o_cols[2], 50)
+
+# --- 3. NIFTY 100 LIVE SCANNER (Full Layout) ---
+st.markdown("### 🔥 NIFTY 100 LIVE SCANNER")
+NIFTY_100 = ["RELIANCE.NS", "HDFCBANK.NS", "ADANIENT.NS", "SBIN.NS", "BHARATFORG.NS", "TCS.NS", "ICICIBANK.NS", "INFY.NS"]
+
+for s_sym in NIFTY_100:
+    res = get_market_data(s_sym)
     if res:
-        color = "#2e7d32" if res['status']=="BULLISH" else "#c62828"
-        st.markdown(f"<div style='background:white; border-radius:12px; padding:15px; margin-bottom:10px; border-left:10px solid {color};'><div style='display:flex; justify-content:space-between;'><div><b>⭐ {sym.split('.')[0]}</b><br><span class='price-large'>₹{res['p']}</span></div><div style='text-align:right;'><span style='color:#2e7d32; font-weight:900;'>T: {round(res['p']*1.007, 2)}</span><br><span style='color:#c62828; font-weight:900;'>S: {res['ema']}</span></div></div></div>", unsafe_allow_html=True)
-
-# 4. BTST SECTION (RE-ADDED)
-st.markdown("<div class='btst-container'><h3 style='margin:0; color:#1a237e;'>💰 BTST / SWING ALERTS</h3>", unsafe_allow_html=True)
-for sym in ["TCS.NS", "INFY.NS", "ICICIBANK.NS"]:
-    res = get_data(sym)
-    if res and res['status'] == "BULLISH":
-        st.markdown(f"<div class='btst-card'><div><b style='font-size:18px;'>🚀 {sym.split('.')[0]}</b><br><span style='color:#757575; font-size:12px;'>Potential BTST Pick</span></div><div style='text-align:right;'><span style='font-size:20px; font-weight:900;'>₹{res['p']}</span><br><span style='color:#2e7d32; font-weight:bold; font-size:12px;'>MODE: STRONG</span></div></div>", unsafe_allow_html=True)
-st.markdown("</div>", unsafe_allow_html=True)
+        star = "⭐ " if s_sym in QUALITY_LIST else ""
+        bg_col = "#2e7d32" if res['s'] == "BUY" else ("#c62828" if res['s'] == "SELL" else "#9e9e9e")
+        st.markdown(f"""
+        <div class='compact-card' style='border-left-color:{bg_col};'>
+            <div style='display:flex; justify-content:space-between; align-items:center;'>
+                <div style='flex:2.5;'>
+                    <p class='stock-name'>{star}{s_sym.split('.')[0]}</p>
+                    <p class='price-bold'>₹{res['p']}</p>
+                    <p style='font-weight:bold; font-size:13px; color:{bg_col}; margin:0;'>{res['zone']}</p>
+                </div>
+                <div style='flex:1; text-align:center;'>
+                    <div class='signal-label' style='background-color:{bg_col}; margin:auto;'>{res['s']}</div>
+                </div>
+                <div style='flex:2.5; text-align:right;'>
+                    <p class='tgt-text'>TGT: {res['t']}</p>
+                    <p class='sl-text'>SL: {res['sl']}</p>
+                    <p style='font-size:12px; color:#666; margin:0;'>RSI: {res['rsi']}</p>
+                </div>
+            </div>
+        </div>""", unsafe_allow_html=True)
 
 time.sleep(30)
 st.rerun()
