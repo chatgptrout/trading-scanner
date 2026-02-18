@@ -23,7 +23,7 @@ st.markdown("""
     </style>
     """, unsafe_allow_html=True)
 
-# --- DATA FUNCTIONS ---
+# --- FUNCTIONS ---
 def calculate_rsi(data, window=14):
     delta = data.diff()
     gain = (delta.where(delta > 0, 0)).rolling(window=window).mean()
@@ -58,7 +58,7 @@ IST = pytz.timezone('Asia/Kolkata')
 st.markdown(f"<div class='live-clock'>⏰ {datetime.now(IST).strftime('%H:%M:%S')}</div>", unsafe_allow_html=True)
 st.markdown("<h1>🚀 TRADEX MEGA TERMINAL</h1>", unsafe_allow_html=True)
 
-# --- 1. MARKET STATUS (BULLISH/BEARISH MSG RESTORED) ---
+# --- 1. MARKET STATUS (Levels Restored) ---
 st.markdown("### 🎯 INDEX & COMMODITY STATUS")
 m_cols = st.columns(5)
 assets = {"SENSEX": "^BSESN", "NIFTY": "^NSEI", "CRUDE OIL": "CL=F", "NATURAL GAS": "NG=F", "GOLD": "GC=F"}
@@ -74,4 +74,52 @@ for i, (name, sym) in enumerate(assets.items()):
             st.markdown(f"""<div class='compact-card' style='border-left-color:{res['c']};'>
                 <h4 style='margin:0;'>{name}</h4>
                 <p class='price-bold'>{res['p']}</p>
-                <p class='level-msg' style='color:{res['c
+                <p class='level-msg' style='color:{res['c']};'>{msg} {res['sl']}</p>
+                <p style='font-size:12px; color:#666; margin:0;'>RSI: {res['rsi']}</p>
+            </div>""", unsafe_allow_html=True)
+
+# --- 2. STRIKE PRICE RADAR ---
+st.markdown("### 🔥 STRIKE PRICE RADAR (AUTO-SIGNALS)")
+o_cols = st.columns(3)
+def display_option(name, res, col, base=100):
+    if res:
+        with col:
+            if res['sw']: st.markdown(f"<div class='option-card' style='background:#f5f5f5; border-color:#9e9e9e;'><b>{name} SIDEWAYS</b></div>", unsafe_allow_html=True)
+            elif res['s'] == "BUY":
+                strike = get_atm_strike(res['p'], base)
+                st.markdown(f"<div class='option-card'><div><b>{name} {strike} CE</b></div><div class='buy-level'>BUY ABOVE: {res['p']} 👁️🙏</div></div>", unsafe_allow_html=True)
+
+display_option("SENSEX", results.get("SENSEX"), o_cols[0], 100)
+display_option("NIFTY", results.get("NIFTY"), o_cols[1], 50)
+display_option("CRUDE", results.get("CRUDE OIL"), o_cols[2], 50)
+
+# --- 3. NIFTY 100 LIVE SCANNER (Full Layout) ---
+st.markdown("### 🔥 NIFTY 100 LIVE SCANNER")
+NIFTY_100 = ["RELIANCE.NS", "HDFCBANK.NS", "ADANIENT.NS", "SBIN.NS", "BHARATFORG.NS", "TCS.NS", "ICICIBANK.NS", "INFY.NS"]
+
+for s_sym in NIFTY_100:
+    res = get_market_data(s_sym)
+    if res:
+        star = "⭐ " if s_sym in QUALITY_LIST else ""
+        bg_col = "#2e7d32" if res['s'] == "BUY" else ("#c62828" if res['s'] == "SELL" else "#9e9e9e")
+        st.markdown(f"""
+        <div class='compact-card' style='border-left-color:{bg_col};'>
+            <div style='display:flex; justify-content:space-between; align-items:center;'>
+                <div style='flex:2.5;'>
+                    <p class='stock-name'>{star}{s_sym.split('.')[0]}</p>
+                    <p class='price-bold'>₹{res['p']}</p>
+                    <p style='font-weight:bold; font-size:13px; color:{bg_col}; margin:0;'>{res['zone']}</p>
+                </div>
+                <div style='flex:1; text-align:center;'>
+                    <div class='signal-label' style='background-color:{bg_col}; margin:auto;'>{res['s']}</div>
+                </div>
+                <div style='flex:2.5; text-align:right;'>
+                    <p class='tgt-text'>TGT: {res['t']}</p>
+                    <p class='sl-text'>SL: {res['sl']}</p>
+                    <p style='font-size:12px; color:#666; margin:0;'>RSI: {res['rsi']}</p>
+                </div>
+            </div>
+        </div>""", unsafe_allow_html=True)
+
+time.sleep(30)
+st.rerun()
