@@ -4,7 +4,7 @@ from datetime import datetime
 import time
 import pytz 
 
-st.set_page_config(page_title="TRADEX MEGA TERMINAL", layout="wide")
+st.set_page_config(page_title="TRADEX LIVE TERMINAL", layout="wide")
 
 # --- CUSTOM CSS ---
 st.markdown("""
@@ -20,6 +20,7 @@ st.markdown("""
     .bg-buy { background-color: #2e7d32; }
     .bg-sell { background-color: #c62828; }
     .btst-card { background: #f3e5f5; border: 2px solid #4a148c; border-radius: 10px; padding: 15px; margin-bottom: 20px; }
+    .commodity-alert { background: #fff3e0; border: 2px dashed #ef6c00; border-radius: 10px; padding: 15px; margin-top: 10px; }
     </style>
     """, unsafe_allow_html=True)
 
@@ -50,22 +51,15 @@ with col_t1:
 with col_t2:
     st.markdown(f"<div class='live-clock'>⏰ {get_ist_time()}</div>", unsafe_allow_html=True)
 
-# --- 1. INDEX & COMMODITY STATUS (Nifty, BankNifty, Crude, NG) ---
+# --- 1. MARKET STATUS (Nifty, BankNifty, Crude, NG) ---
 st.markdown("### 🎯 MARKET STATUS")
 c1, c2, c3, c4 = st.columns(4)
-# Symbols for Nifty, BankNifty, Crude Oil (CL=F), Natural Gas (NG=F)
-m_indices = {
-    "NIFTY": "^NSEI", 
-    "BANKNIFTY": "^NSEBANK",
-    "CRUDE OIL": "CL=F",
-    "NATURAL GAS": "NG=F"
-}
+m_indices = {"NIFTY": "^NSEI", "BANKNIFTY": "^NSEBANK", "CRUDE OIL": "CL=F", "NATURAL GAS": "NG=F"}
 
 for i, (name, sym) in enumerate(m_indices.items()):
     res = get_market_data(sym)
     if res:
         msg = "BULLISH ABOVE" if res['s'] == "BUY" else "BEARISH BELOW"
-        # Display in 4 columns
         target_col = [c1, c2, c3, c4][i]
         with target_col:
             st.markdown(f"""<div class='compact-card' style='border-left-color:{res['c']};'>
@@ -73,6 +67,14 @@ for i, (name, sym) in enumerate(m_indices.items()):
                 <p class='price-bold'>{res['p']}</p>
                 <p style='font-weight:bold; color:{res['c']}; font-size:14px;'>{msg} {res['sl']}</p>
             </div>""", unsafe_allow_html=True)
+
+# --- EVENING BREAKOUT ALERT BOX ---
+st.markdown("""
+    <div class='commodity-alert'>
+        <h4 style='color:#ef6c00; margin:0;'>🌙 EVENING BREAKOUT RADAR</h4>
+        <p style='margin:0; font-size:14px;'>US Market opens at 7:00 PM IST. Watch for high volume in Crude & NG.</p>
+    </div>
+    """, unsafe_allow_html=True)
 
 # --- 2. AUTOMATIC BTST SCANNER ---
 st.markdown("### 🌙 BTST / STBT TOP PICKS")
