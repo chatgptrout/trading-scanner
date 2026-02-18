@@ -4,7 +4,6 @@ from datetime import datetime
 import time
 import pytz 
 
-# --- PAGE CONFIG ---
 st.set_page_config(page_title="TRADEX MEGA TERMINAL", layout="wide")
 
 # --- CUSTOM CSS ---
@@ -20,7 +19,7 @@ st.markdown("""
     .signal-label { padding: 6px 12px; border-radius: 4px; font-size: 16px; font-weight: 900; color: white; text-align: center; }
     .bg-buy { background-color: #2e7d32; }
     .bg-sell { background-color: #c62828; }
-    .btst-card { background: #f3e5f5; border: 2px solid #4a148c; border-radius: 10px; padding: 15px; margin-bottom: 20px; min-height: 120px; }
+    .btst-card { background: #f3e5f5; border: 2px solid #4a148c; border-radius: 10px; padding: 15px; margin-bottom: 20px; }
     </style>
     """, unsafe_allow_html=True)
 
@@ -42,6 +41,10 @@ def get_market_data(ticker):
         return {"p": cp, "s": status, "t": round(cp + (diff if cp > ema else -diff), 2), "sl": ema, "bg": bg, "c": color}
     except: return None
 
+# --- QUALITY STOCKS LIST ---
+# In stocks ke naam ke aage Star dikhega
+QUALITY_LIST = ["ITC.NS", "RELIANCE.NS", "HDFCBANK.NS", "TCS.NS", "INFY.NS", "ICICIBANK.NS", "SBIN.NS"]
+
 # --- HEADER ---
 col_t1, col_t2 = st.columns([2, 1])
 with col_t1:
@@ -49,13 +52,12 @@ with col_t1:
 with col_t2:
     st.markdown(f"<div class='live-clock'>⏰ {get_ist_time()}</div>", unsafe_allow_html=True)
 
-st.markdown("""<div class="ticker-wrap"><div class="ticker">📢 MARKET UPDATE: Live Scanning 100 Stocks... | 🔥 Auto-Refresh Active... | ✨ Top Breakouts for BTST below...</div></div>""", unsafe_allow_html=True)
+st.markdown("""<div class="ticker-wrap"><div class="ticker">📢 MARKET UPDATE: High Quality Stocks marked with ⭐ | 🔥 Auto-Refresh Active...</div></div>""", unsafe_allow_html=True)
 
 # --- 1. INDEX STATUS ---
 st.markdown("### 🎯 INDEX STATUS")
 c1, c2 = st.columns(2)
-indices = {"NIFTY": "^NSEI", "BANKNIFTY": "^NSEBANK"}
-for i, (name, sym) in enumerate(indices.items()):
+for i, (name, sym) in enumerate({"NIFTY": "^NSEI", "BANKNIFTY": "^NSEBANK"}.items()):
     res = get_market_data(sym)
     if res:
         with (c1 if i==0 else c2):
@@ -65,22 +67,22 @@ for i, (name, sym) in enumerate(indices.items()):
                 <p style='font-weight:bold; color:{res['c']};'>{res['s']} ABOVE {res['sl']}</p>
             </div>""", unsafe_allow_html=True)
 
-# --- 2. AUTOMATIC BTST/STBT SCANNER ---
+# --- 2. AUTOMATIC BTST SCANNER ---
 st.markdown("### 🌙 BTST / STBT TOP PICKS")
 NIFTY_100 = ["RELIANCE.NS", "HDFCBANK.NS", "ADANIENT.NS", "SBIN.NS", "BHARATFORG.NS", "TATAMOTORS.NS", "TCS.NS", "ICICIBANK.NS", "INFY.NS", "JSWSTEEL.NS", "AXISBANK.NS", "BAJFINANCE.NS", "LT.NS", "ITC.NS", "BHARTIARTL.NS"]
 
 btst_list = []
 stock_results = []
 
-# Sabse pehle saare stocks scan karenge
 for s_sym in NIFTY_100:
     res = get_market_data(s_sym)
     if res:
         stock_results.append((s_sym, res))
-        if res['s'] == "BUY": # Bullish stocks for BTST
-            btst_list.append((s_sym.split('.')[0], res))
+        if res['s'] == "BUY":
+            # BTST mein bhi Star check karenge
+            star = "⭐" if s_sym in QUALITY_LIST else ""
+            btst_list.append((f"{star}{s_sym.split('.')[0]}", res))
 
-# Top 2 BTST Cards dikhao
 if btst_list:
     b_col1, b_col2 = st.columns(2)
     for i in range(min(2, len(btst_list))):
@@ -90,13 +92,18 @@ if btst_list:
 
 st.divider()
 
-# --- 3. NIFTY 100 SCANNER ---
+# --- 3. NIFTY 100 LIVE SCANNER WITH GOLD STAR ---
 st.markdown("### 🔥 NIFTY 100 LIVE SCANNER")
 for s_sym, res in stock_results:
+    # Yahan Star logic kaam karegi
+    star = "⭐ " if s_sym in QUALITY_LIST else ""
     st.markdown(f"""
     <div class='compact-card' style='border-left-color:{res['c']};'>
         <div style='display:flex; justify-content:space-between; align-items:center;'>
-            <div style='flex:2;'><p class='stock-name'>{s_sym.split('.')[0]}</p><p class='price-bold'>₹{res['p']}</p></div>
+            <div style='flex:2;'>
+                <p class='stock-name'>{star}{s_sym.split('.')[0]}</p>
+                <p class='price-bold'>₹{res['p']}</p>
+            </div>
             <div style='flex:1;'><div class='signal-label {res['bg']}'>{res['s']}</div></div>
             <div style='flex:2; text-align:right;'>
                 <p style='color:#2e7d32; font-weight:bold; margin:0;'>TGT: {res['t']}</p>
@@ -105,6 +112,5 @@ for s_sym, res in stock_results:
         </div>
     </div>""", unsafe_allow_html=True)
 
-# --- REFRESH ---
 time.sleep(30)
 st.rerun()
