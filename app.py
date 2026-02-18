@@ -3,6 +3,7 @@ import yfinance as yf
 from datetime import datetime
 import time
 import pytz 
+import pandas as pd
 
 st.set_page_config(page_title="TRADEX LIVE TERMINAL", layout="wide")
 
@@ -23,8 +24,17 @@ st.markdown("""
     .commodity-alert { background: #fff3e0; border: 2px dashed #ef6c00; border-radius: 10px; padding: 15px; margin-bottom: 20px; }
     .zone-safe { color: #2e7d32; font-weight: bold; font-size: 14px; }
     .zone-risky { color: #ef6c00; font-weight: bold; font-size: 14px; }
+    .rsi-tag { font-size: 12px; font-weight: bold; color: #555; }
     </style>
     """, unsafe_allow_html=True)
+
+# --- RSI CALCULATION FUNCTION ---
+def calculate_rsi(data, window=14):
+    delta = data.diff()
+    gain = (delta.where(delta > 0, 0)).rolling(window=window).mean()
+    loss = (-delta.where(delta < 0, 0)).rolling(window=window).mean()
+    rs = gain / loss
+    return 100 - (100 / (1 + rs))
 
 # --- FUNCTIONS ---
 def get_ist_time():
@@ -33,18 +43,29 @@ def get_ist_time():
 
 def get_market_data(ticker):
     try:
-        data = yf.Ticker(ticker).history(period="2d", interval="15m")
-        if data.empty: return None
-        cp = round(data['Close'].iloc[-1], 2)
-        ema = round(data['Close'].ewm(span=20, adjust=False).mean().iloc[-1], 2)
+        df = yf.Ticker(ticker).history(period="5d", interval="15m")
+        if df.empty: return None
+        cp = round(df['Close'].iloc[-1], 2)
+        ema = round(df['Close'].ewm(span=20, adjust=False).mean().iloc[-1], 2)
+        
+        # Calculate RSI
+        df['RSI'] = calculate_rsi(df['Close'])
+        current_rsi = round(df['RSI'].iloc[-1], 2)
+        
         status = "BUY" if cp > ema else "SELL"
         bg = "bg-buy" if cp > ema else "bg-sell"
         color = "#2e7d32" if cp > ema else "#c62828"
-        # Safe Entry logic
+        
         is_safe = "✅ SAFE ENTRY" if abs(cp - ema) / ema < 0.003 else "⚠️ PRICE TOO HIGH"
         zone_class = "zone-safe" if "SAFE" in is_safe else "zone-risky"
+        
+        # RSI Analysis
+        rsi_msg = "NORMAL"
+        if current_rsi > 70: rsi_msg = "🔥 OVERBOUGHT"
+        elif current_rsi < 30: rsi_msg = "❄️ OVERSOLD"
+        
         diff = cp * 0.007
-        return {"p": cp, "s": status, "t": round(cp + (diff if cp > ema else -diff), 2), "sl": ema, "bg": bg, "c": color, "zone": is_safe, "z_cls": zone_class}
+        return {"p": cp, "s": status, "t": round(cp + (diff if cp > ema else -diff), 2), "sl": ema, "bg": bg, "c": color, "zone": is_safe, "z_cls": zone_class, "rsi": current_rsi, "rsi_m": rsi_msg}
     except: return None
 
 QUALITY_LIST = ["ITC.NS", "RELIANCE.NS", "HDFCBANK.NS", "TCS.NS", "INFY.NS", "ICICIBANK.NS", "SBIN.NS"]
@@ -72,13 +93,14 @@ for i, (name, sym) in enumerate(m_indices.items()):
                 <p class='price-bold'>{res['p']}</p>
                 <p style='font-weight:bold; color:{res['c']}; font-size:14px;'>{msg} {res['sl']}</p>
                 <p class='{res['z_cls']}'>{res['zone']}</p>
+                <p class='rsi-tag'>RSI: {res['rsi']} ({res['rsi_m']})</p>
             </div>""", unsafe_allow_html=True)
 
-# --- 2. EVENING BREAKOUT RADAR (IT'S BACK!) ---
+# --- 2. EVENING BREAKOUT RADAR (STILL HERE!) ---
 st.markdown(f"""
     <div class='commodity-alert'>
         <h4 style='color:#ef6c00; margin:0;'>🌙 EVENING BREAKOUT RADAR (ACTIVE)</h4>
-        <p style='margin:0; font-size:14px;'>US Market opens soon. Current Crude Price: {get_market_data('CL=F')['p'] if get_market_data('CL=F') else 'Loading...'}</p>
+        <p style='margin:0; font-size:14px;'>US Market opens soon. Focus on RSI for better confirmation.</p>
     </div>
     """, unsafe_allow_html=True)
 
@@ -105,6 +127,7 @@ if btst_list:
                 <h2 style='color:#4a148c; margin:0;'>✨ {name} - BTST</h2>
                 <p class='price-bold'>Entry: {data['p']} | Tgt: {data['t']}</p>
                 <p class='{data['z_cls']}'>{data['zone']}</p>
+                <p class='rsi-tag'>RSI: {data['rsi']} ({data['rsi_m']})</p>
             </div>""", unsafe_allow_html=True)
 
 st.divider()
@@ -120,6 +143,7 @@ for s_sym, res in stock_results:
                 <p class='stock-name'>{star}{s_sym.split('.')[0]}</p>
                 <p class='price-bold'>₹{res['p']}</p>
                 <p class='{res['z_cls']}'>{res['zone']}</p>
+                <p class='rsi-tag'>RSI: {res['rsi']} ({res['rsi_m']})</p>
             </div>
             <div style='flex:1;'><div class='signal-label {res['bg']}'>{res['s']}</div></div>
             <div style='flex:2; text-align:right;'>
