@@ -5,9 +5,9 @@ import time
 import pytz 
 
 # Mobile Page Config
-st.set_page_config(page_title="TRADEX MOBILE V9", layout="centered")
+st.set_page_config(page_title="TRADEX MOBILE V10", layout="centered")
 
-# --- MOBILE CSS (RADAR BLOCK REMOVED) ---
+# --- FINAL CLEAN MOBILE CSS ---
 st.markdown("""
     <style>
     .stApp { background-color: #fdfdfd; }
@@ -36,7 +36,7 @@ def get_data(ticker):
 # --- UI RENDER ---
 st.markdown(f"<div class='mobile-clock'>🚀 {datetime.now(pytz.timezone('Asia/Kolkata')).strftime('%H:%M:%S')}</div>", unsafe_allow_html=True)
 
-# 1. INDEX STATUS
+# 1. INDEX STATUS (Nifty, Sensex, Crude, NG)
 assets = {"NIFTY": "^NSEI", "SENSEX": "^BSESN", "CRUDE": "CL=F", "NAT. GAS": "NG=F"}
 cols = st.columns(2)
 for i, (name, sym) in enumerate(assets.items()):
@@ -51,9 +51,9 @@ for i, (name, sym) in enumerate(assets.items()):
                 <div class='bull-level' style='color:{color};'>{label} {res['ema']}</div>
             </div>""", unsafe_allow_html=True)
 
-st.markdown("---") # Separator between Index and Scanner
+# --- RADAR SIGNALS BLOCK REMOVED PERMANENTLY ---
 
-# 2. LIVE SCANNER (Yahan se Radar Signals gayab hai)
+# 2. LIVE SCANNER
 st.markdown("### 📊 LIVE SCANNER")
 for sym in ["RELIANCE.NS", "HDFCBANK.NS", "ADANIENT.NS"]:
     res = get_data(sym)
