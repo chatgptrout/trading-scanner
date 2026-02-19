@@ -4,96 +4,120 @@ from datetime import datetime
 import time
 import pytz 
 
-# --- 1. SETTINGS & THEME ---
-st.set_page_config(page_title="TRADEX PRO V15", layout="centered")
+st.set_page_config(page_title="TRADEX LIVE TERMINAL", layout="wide")
 
+# --- CUSTOM CSS ---
 st.markdown("""
     <style>
-    .stApp { background-color: #ffffff; }
-    .main-clock { font-size: 35px; font-weight: 900; color: #ff5252; text-align: center; margin-bottom: 20px; border-bottom: 2px solid #f0f0f0; padding-bottom: 10px; }
-    
-    /* Index Status Cards */
-    .index-card { background: white; border-radius: 15px; padding: 18px; margin-bottom: 12px; border-left: 10px solid #1a237e; box-shadow: 0 4px 12px rgba(0,0,0,0.06); }
-    .price-text { font-size: 28px; font-weight: 900; color: #121212; margin: 4px 0; }
-    .status-tag { font-size: 11px; font-weight: 900; letter-spacing: 0.5px; }
-
-    /* Live Scanner Rows */
-    .scanner-box { background: #fafafa; border-radius: 12px; padding: 15px; margin-bottom: 12px; border: 1px solid #eee; border-left: 12px solid #2e7d32; }
-    .stock-name { font-size: 20px; font-weight: 900; color: #1a237e; }
-    
-    /* BTST Special Zone */
-    .btst-section { background: #fff9c4; border: 2px solid #fbc02d; border-radius: 15px; padding: 20px; margin-top: 30px; }
-    .btst-item { background: white; border-radius: 10px; padding: 15px; margin-top: 10px; border-right: 10px solid #fbc02d; display: flex; justify-content: space-between; align-items: center; }
+    .live-clock { font-size: 35px; font-weight: 900; color: #d32f2f; text-align: right; font-family: 'Courier New', monospace; }
+    .ticker-wrap { width: 100%; overflow: hidden; background-color: #1a237e; color: white; padding: 10px 0; font-weight: bold; margin-bottom: 20px; }
+    .ticker { display: inline-block; white-space: nowrap; animation: ticker 30s linear infinite; }
+    @keyframes ticker { 0% { transform: translateX(100%); } 100% { transform: translateX(-100%); } }
+    .compact-card { background: white; border-radius: 8px; padding: 12px 18px; margin-bottom: 6px; border-left: 10px solid #1a237e; box-shadow: 0 2px 5px rgba(0,0,0,0.1); }
+    .stock-name { font-size: 28px !important; font-weight: 900; color: #1a237e; margin: 0; }
+    .price-bold { font-size: 32px !important; font-weight: 900; color: #000; margin: 0; }
+    .signal-label { padding: 6px 12px; border-radius: 4px; font-size: 16px; font-weight: 900; color: white; text-align: center; }
+    .bg-buy { background-color: #2e7d32; }
+    .bg-sell { background-color: #c62828; }
+    .btst-card { background: #f3e5f5; border: 2px solid #4a148c; border-radius: 10px; padding: 15px; margin-bottom: 20px; }
+    .commodity-alert { background: #fff3e0; border: 2px dashed #ef6c00; border-radius: 10px; padding: 15px; margin-top: 10px; }
     </style>
     """, unsafe_allow_html=True)
 
-# --- 2. DATA ENGINE ---
-def fetch_market_data(ticker):
+# --- FUNCTIONS ---
+def get_ist_time():
+    IST = pytz.timezone('Asia/Kolkata')
+    return datetime.now(IST).strftime("%H:%M:%S")
+
+def get_market_data(ticker):
     try:
         data = yf.Ticker(ticker).history(period="2d", interval="15m")
         if data.empty: return None
         cp = round(data['Close'].iloc[-1], 2)
         ema = round(data['Close'].ewm(span=20, adjust=False).mean().iloc[-1], 2)
-        return {"p": cp, "ema": ema, "is_bull": cp > ema}
+        status = "BUY" if cp > ema else "SELL"
+        bg = "bg-buy" if cp > ema else "bg-sell"
+        color = "#2e7d32" if cp > ema else "#c62828"
+        diff = cp * 0.007
+        return {"p": cp, "s": status, "t": round(cp + (diff if cp > ema else -diff), 2), "sl": ema, "bg": bg, "c": color}
     except: return None
 
-# --- 3. UI HEADER ---
-IST = pytz.timezone('Asia/Kolkata')
-current_time = datetime.now(IST).strftime("%H:%M:%S")
-st.markdown(f"<div class='main-clock'>🚀 {current_time}</div>", unsafe_allow_html=True)
+QUALITY_LIST = ["ITC.NS", "RELIANCE.NS", "HDFCBANK.NS", "TCS.NS", "INFY.NS", "ICICIBANK.NS", "SBIN.NS"]
 
-# --- 4. INDEX & COMMODITY (Nifty, Sensex, Crude, NG) ---
-# No Radar Signals here anymore
-indices = {"NIFTY 50": "^NSEI", "SENSEX": "^BSESN", "CRUDE OIL": "CL=F", "NATURAL GAS": "NG=F"}
-idx_cols = st.columns(2)
+# --- HEADER ---
+col_t1, col_t2 = st.columns([2, 1])
+with col_t1:
+    st.markdown("<h1 style='margin:0;'>🚀 TRADEX MEGA TERMINAL</h1>", unsafe_allow_html=True)
+with col_t2:
+    st.markdown(f"<div class='live-clock'>⏰ {get_ist_time()}</div>", unsafe_allow_html=True)
 
-for i, (name, sym) in enumerate(indices.items()):
-    res = fetch_market_data(sym)
+# --- 1. MARKET STATUS (Nifty, BankNifty, Crude, NG) ---
+st.markdown("### 🎯 MARKET STATUS")
+c1, c2, c3, c4 = st.columns(4)
+m_indices = {"NIFTY": "^NSEI", "BANKNIFTY": "^NSEBANK", "CRUDE OIL": "CL=F", "NATURAL GAS": "NG=F"}
+
+for i, (name, sym) in enumerate(m_indices.items()):
+    res = get_market_data(sym)
     if res:
-        color = "#2e7d32" if res['is_bull'] else "#c62828"
-        label = "BULLISH ABOVE" if res['is_bull'] else "BEARISH BELOW"
-        with idx_cols[i % 2]:
-            st.markdown(f"""
-            <div class='index-card' style='border-left-color: {color};'>
-                <div style='color: #757575; font-weight: bold; font-size: 13px;'>{name}</div>
-                <div class='price-text'>{res['p']}</div>
-                <div class='status-tag' style='color: {color};'>{label} {res['ema']}</div>
+        msg = "BULLISH ABOVE" if res['s'] == "BUY" else "BEARISH BELOW"
+        target_col = [c1, c2, c3, c4][i]
+        with target_col:
+            st.markdown(f"""<div class='compact-card' style='border-left-color:{res['c']};'>
+                <h3 style='margin:0;'>{name}</h3>
+                <p class='price-bold'>{res['p']}</p>
+                <p style='font-weight:bold; color:{res['c']}; font-size:14px;'>{msg} {res['sl']}</p>
             </div>""", unsafe_allow_html=True)
 
-# --- 5. LIVE SCANNER (Expanded List) ---
-st.markdown("### 📊 LIVE INSTITUTIONAL SCANNER")
-stocks_to_scan = ["RELIANCE.NS", "HDFCBANK.NS", "ICICIBANK.NS", "SBIN.NS", "ADANIENT.NS", "TCS.NS", "INFY.NS", "AXISBANK.NS"]
+# --- EVENING BREAKOUT ALERT BOX ---
+st.markdown("""
+    <div class='commodity-alert'>
+        <h4 style='color:#ef6c00; margin:0;'>🌙 EVENING BREAKOUT RADAR</h4>
+        <p style='margin:0; font-size:14px;'>US Market opens at 7:00 PM IST. Watch for high volume in Crude & NG.</p>
+    </div>
+    """, unsafe_allow_html=True)
 
-for s in stocks_to_scan:
-    val = fetch_market_data(s)
-    if val:
-        star = "⭐" if s in ["RELIANCE.NS", "HDFCBANK.NS", "SBIN.NS"] else ""
-        s_color = "#2e7d32" if val['is_bull'] else "#c62828"
-        st.markdown(f"""
-        <div class='scanner-box' style='border-left-color: {s_color};'>
-            <div style='display: flex; justify-content: space-between; align-items: center;'>
-                <div>
-                    <div class='stock-name'>{star} {s.split('.')[0]}</div>
-                    <div class='price-text' style='font-size: 24px;'>₹{val['p']}</div>
-                </div>
-                <div style='text-align: right;'>
-                    <div style='color: #2e7d32; font-weight: 900;'>TGT: {round(val['p']*1.008, 2)}</div>
-                    <div style='color: #c62828; font-weight: 900;'>SL: {val['ema']}</div>
-                </div>
+# --- 2. AUTOMATIC BTST SCANNER ---
+st.markdown("### 🌙 BTST / STBT TOP PICKS")
+NIFTY_100 = ["RELIANCE.NS", "HDFCBANK.NS", "ADANIENT.NS", "SBIN.NS", "BHARATFORG.NS", "TATAMOTORS.NS", "TCS.NS", "ICICIBANK.NS", "INFY.NS", "JSWSTEEL.NS", "AXISBANK.NS", "BAJFINANCE.NS", "LT.NS", "ITC.NS", "BHARTIARTL.NS"]
+
+btst_list = []
+stock_results = []
+
+for s_sym in NIFTY_100:
+    res = get_market_data(s_sym)
+    if res:
+        stock_results.append((s_sym, res))
+        if res['s'] == "BUY":
+            star = "⭐" if s_sym in QUALITY_LIST else ""
+            btst_list.append((f"{star}{s_sym.split('.')[0]}", res))
+
+if btst_list:
+    b_col1, b_col2 = st.columns(2)
+    for i in range(min(2, len(btst_list))):
+        name, data = btst_list[i]
+        with (b_col1 if i==0 else b_col2):
+            st.markdown(f"""<div class='btst-card'><h2 style='color:#4a148c; margin:0;'>✨ {name} - BTST</h2><p class='price-bold'>Entry: {data['p']} | Tgt: {data['t']}</p></div>""", unsafe_allow_html=True)
+
+st.divider()
+
+# --- 3. NIFTY 100 LIVE SCANNER ---
+st.markdown("### 🔥 NIFTY 100 LIVE SCANNER")
+for s_sym, res in stock_results:
+    star = "⭐ " if s_sym in QUALITY_LIST else ""
+    st.markdown(f"""
+    <div class='compact-card' style='border-left-color:{res['c']};'>
+        <div style='display:flex; justify-content:space-between; align-items:center;'>
+            <div style='flex:2;'>
+                <p class='stock-name'>{star}{s_sym.split('.')[0]}</p>
+                <p class='price-bold'>₹{res['p']}</p>
             </div>
-        </div>""", unsafe_allow_html=True)
-
-# --- 6. BTST / SWING ZONE ---
-st.markdown("<div class='btst-section'><h3>💰 BTST / SWING ALERTS</h3>", unsafe_allow_html=True)
-for b_stock in ["TCS.NS", "INFY.NS", "SBIN.NS"]:
-    b_val = fetch_market_data(b_stock)
-    if b_val and b_val['is_bull']:
-        st.markdown(f"""
-        <div class='btst-item'>
-            <div><b style='font-size: 18px; color: #1a237e;'>🚀 {b_stock.split('.')[0]}</b><br><span style='font-size: 12px; color: #757575;'>Institutional Momentum</span></div>
-            <div style='text-align: right;'><span class='price-text' style='font-size: 22px;'>₹{b_val['p']}</span><br><b style='color: #2e7d32; font-size: 12px;'>STRONG BUY</b></div>
-        </div>""", unsafe_allow_html=True)
-st.markdown("</div>", unsafe_allow_html=True)
+            <div style='flex:1;'><div class='signal-label {res['bg']}'>{res['s']}</div></div>
+            <div style='flex:2; text-align:right;'>
+                <p style='color:#2e7d32; font-weight:bold; margin:0;'>TGT: {res['t']}</p>
+                <p style='color:#c62828; font-weight:bold; margin:0;'>SL: {res['sl']}</p>
+            </div>
+        </div>
+    </div>""", unsafe_allow_html=True)
 
 time.sleep(30)
 st.rerun()
