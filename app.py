@@ -4,8 +4,8 @@ from datetime import datetime
 import time
 import pytz 
 
-# --- 1. CONFIG ---
-st.set_page_config(page_title="TRADEX PRO V29", layout="centered")
+# --- 1. CONFIG (SAAF-SUTHRA WHITE) ---
+st.set_page_config(page_title="TRADEX PRO V30", layout="centered")
 
 st.markdown("""
     <style>
@@ -15,52 +15,53 @@ st.markdown("""
     .alert-card { border-radius: 10px; padding: 12px; margin-top: 6px; display: flex; justify-content: space-between; align-items: center; border-right: 8px solid; }
     .btst { background: #e8f5e9; border-right-color: #2e7d32; }
     .stbt { background: #ffebee; border-right-color: #c62828; }
-    .breakout-tag { background: #1a237e; color: white; padding: 2px 6px; border-radius: 4px; font-size: 10px; font-weight: bold; }
+    .breakout-tag { background: #ff9800; color: white; padding: 2px 8px; border-radius: 4px; font-size: 11px; font-weight: bold; animation: blinker 1s linear infinite; }
+    @keyframes blinker { 50% { opacity: 0; } }
     </style>
     """, unsafe_allow_html=True)
 
-def get_market_data(ticker):
+def get_live_data(ticker):
     try:
         df = yf.Ticker(ticker).history(period="2d", interval="15m")
         if df.empty: return None
-        ltp = df['Close'].iloc[-1]
+        ltp = round(df['Close'].iloc[-1], 2)
         
-        # MCX PRICE MATCHING
-        if ticker == "CL=F": ltp = ltp * 84.45
-        elif ticker == "NG=F": ltp = ltp * 84.45 * 1.25
+        # MCX MATCHING (Dhan/Groww Prices)
+        if ticker == "CL=F": ltp = round(ltp * 84.45, 2)
+        elif ticker == "NG=F": ltp = round(ltp * 84.45 * 1.25, 2)
             
-        ema = df['Close'].ewm(span=20, adjust=False).mean().iloc[-1]
-        if ticker in ["CL=F", "NG=F"]: ema = ema * 84.45 * (1.25 if ticker=="NG=F" else 1)
+        ema = round(df['Close'].ewm(span=20, adjust=False).mean().iloc[-1], 2)
+        if ticker in ["CL=F", "NG=F"]: ema = round(ema * 84.45 * (1.25 if ticker=="NG=F" else 1), 2)
         
-        # Breakout: Crosses EMA from below
-        is_break = ltp > ema and df['Close'].iloc[-2] <= (ema / (84.45 if ticker in ["CL=F", "NG=F"] else 1))
-        return {"p": round(ltp, 2), "ema": round(ema, 2), "bull": ltp > ema, "break": is_break}
+        # Power Breakout: Current crosses EMA from below in the current 15m candle
+        is_breakout = ltp > ema and df['Close'].iloc[-2] <= (ema / (84.45 if ticker in ["CL=F", "NG=F"] else 1))
+        return {"p": ltp, "ema": ema, "bull": ltp > ema, "break": is_breakout}
     except: return None
 
 # UI HEADER
 IST = pytz.timezone('Asia/Kolkata')
 st.markdown(f"<div class='main-clock'>🚀 {datetime.now(IST).strftime('%H:%M:%S')}</div>", unsafe_allow_html=True)
 
-# 1. INDICES (Dhan/Groww Match)
+# 1. INDICES & MCX
 indices = {"NIFTY 50": "^NSEI", "BANK NIFTY": "^NSEBANK", "CRUDE OIL": "CL=F", "NAT. GAS": "NG=F"}
 cols = st.columns(2)
 for i, (name, sym) in enumerate(indices.items()):
-    res = get_market_data(sym)
+    res = get_live_data(sym)
     if res:
         c = "#2e7d32" if res['bull'] else "#c62828"
         with cols[i % 2]:
             st.markdown(f"<div class='index-card' style='border-left-color:{c};'><div style='font-size:11px; font-weight:bold; color:gray;'>{name}</div><div style='font-size:22px; font-weight:900;'>₹{res['p']}</div><div style='color:{c}; font-size:10px; font-weight:bold;'>EMA: {res['ema']}</div></div>", unsafe_allow_html=True)
 
-# 2. SIGNALS & BREAKOUTS
+# 2. FULL NIFTY 50 SCANNER
 st.markdown("### 🎯 NIFTY 50 SIGNALS & BREAKOUTS")
-# Scanning all major Nifty 50 stocks
-stocks = ["RELIANCE.NS", "TCS.NS", "HDFCBANK.NS", "ICICIBANK.NS", "INFY.NS", "SBIN.NS", "BHARTIARTL.NS", "ITC.NS", "KOTAKBANK.NS", "LT.NS"]
+# Expanded list to catch breakouts even in bad markets
+nifty_heavy = ["RELIANCE.NS", "TCS.NS", "HDFCBANK.NS", "ICICIBANK.NS", "INFY.NS", "SBIN.NS", "BHARTIARTL.NS", "ITC.NS", "KOTAKBANK.NS", "LT.NS", "SUNPHARMA.NS", "AXISBANK.NS", "TITAN.NS", "TATAMOTORS.NS"]
 
-for s in stocks:
-    val = get_market_data(s)
+for s in nifty_heavy:
+    val = get_live_data(s)
     if val:
         t_name = s.split('.')[0]
-        tag = "<span class='breakout-tag'>BREAKOUT</span>" if val['break'] else ""
+        tag = "<span class='breakout-tag'>🔥 BREAKOUT</span>" if val['break'] else ""
         if val['bull']:
             st.markdown(f"<div class='alert-card btst'><div><b>🚀 BTST: {t_name}</b> {tag}</div><div style='text-align:right;'><b>₹{val['p']}</b><br><small style='color:#2e7d32; font-weight:bold;'>BUY</small></div></div>", unsafe_allow_html=True)
         else:
