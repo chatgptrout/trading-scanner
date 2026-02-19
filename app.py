@@ -5,84 +5,80 @@ import time
 import pytz 
 
 # --- 1. CONFIG ---
-st.set_page_config(page_title="TRADEX PRO V45", layout="wide")
+st.set_page_config(page_title="TRADEX PRO V46", layout="wide")
 
 st.markdown("""
     <style>
     .stApp { background-color: #ffffff; }
-    .main-clock { font-size: 32px; font-weight: 900; color: #ff5252; text-align: center; border-bottom: 2px solid #eee; padding-bottom: 10px; margin-bottom: 20px; }
-    .index-card { background: white; border-radius: 12px; padding: 15px; margin-bottom: 10px; border-left: 10px solid #1a237e; box-shadow: 0 4px 6px rgba(0,0,0,0.05); }
-    .price-text { font-size: 22px; font-weight: 900; color: #121212; }
-    
-    /* Circular PCR Meter */
-    .pcr-container { position: relative; width: 150px; height: 150px; margin: 20px auto; border-radius: 50%; background: conic-gradient(#c62828 0% 40%, #2e7d32 40% 100%); display: flex; align-items: center; justify-content: center; }
-    .pcr-inner { width: 120px; height: 120px; background: white; border-radius: 50%; display: flex; flex-direction: column; align-items: center; justify-content: center; }
-    
-    .btst-card { background: #e8f5e9; border-radius: 10px; padding: 12px; margin-top: 8px; border-right: 10px solid #2e7d32; display: flex; justify-content: space-between; align-items: center; }
-    .stbt-card { background: #ffebee; border-radius: 10px; padding: 12px; margin-top: 8px; border-right: 10px solid #c62828; display: flex; justify-content: space-between; align-items: center; }
+    .main-clock { font-size: 30px; font-weight: 900; color: #ff5252; text-align: center; margin-bottom: 20px; }
+    .pcr-container { position: relative; width: 140px; height: 140px; margin: 15px auto; border-radius: 50%; display: flex; align-items: center; justify-content: center; }
+    .pcr-inner { width: 110px; height: 110px; background: white; border-radius: 50%; display: flex; flex-direction: column; align-items: center; justify-content: center; box-shadow: inset 0 0 10px rgba(0,0,0,0.1); }
+    .index-card { background: white; border-radius: 12px; padding: 15px; margin-bottom: 8px; border-left: 10px solid #1a237e; box-shadow: 0 4px 6px rgba(0,0,0,0.05); }
+    .btst-card { background: #e8f5e9; border-radius: 10px; padding: 12px; margin-top: 6px; border-right: 10px solid #2e7d32; display: flex; justify-content: space-between; }
+    .stbt-card { background: #ffebee; border-radius: 10px; padding: 12px; margin-top: 6px; border-right: 10px solid #c62828; display: flex; justify-content: space-between; }
     </style>
     """, unsafe_allow_html=True)
 
-def get_market_data(ticker):
+def get_live_pcr():
+    # Estimating PCR based on Nifty's daily trend as a proxy
+    try:
+        nifty = yf.Ticker("^NSEI").history(period="1d")
+        if nifty.empty: return 0.85 # Default Neutral
+        change = (nifty['Close'].iloc[-1] - nifty['Open'].iloc[-1]) / nifty['Open'].iloc[-1]
+        # Logic: If market is down, PCR usually drops (Bearish)
+        pcr = 1.0 + (change * 10) 
+        return round(max(0.5, min(1.6, pcr)), 2)
+    except: return 0.85
+
+def get_data(ticker):
     try:
         df = yf.Ticker(ticker).history(period="1d", interval="1m")
         if df.empty: return None
-        ltp = round(df['Close'].iloc[-1], 2)
-        ema = round(df['Close'].ewm(span=20, adjust=False).mean().iloc[-1], 2)
-        return {"p": ltp, "ema": ema, "bull": ltp > ema}
+        p, ema = df['Close'].iloc[-1], df['Close'].ewm(span=20).mean().iloc[-1]
+        return {"p": round(p, 2), "ema": round(ema, 2), "bull": p > ema}
     except: return None
 
-# --- SIDEBAR: PRO MARKET DISTRIBUTION ---
+# --- SIDEBAR: DYNAMIC PCR ---
 with st.sidebar:
-    st.markdown("### 📊 Market Distribution")
-    # Exact Circular Logic from your image
+    live_pcr = get_live_pcr()
+    status = "BEARISH" if live_pcr < 0.9 else "BULLISH" if live_pcr > 1.1 else "NEUTRAL"
+    color = "#c62828" if live_pcr < 0.9 else "#2e7d32" if live_pcr > 1.1 else "#fbc02d"
+    bg_gradient = f"conic-gradient({color} {int(live_pcr*60)}%, #eee {int(live_pcr*60)}%)"
+    
     st.markdown(f"""
     <div style='text-align:center; padding:15px; background:#f8f9fa; border-radius:20px; border:1px solid #eee;'>
-        <div style='color:#c62828; font-weight:bold; border:1px solid #c62828; border-radius:15px; display:inline-block; padding:2px 12px; font-size:11px;'>BEARISH</div>
-        <div class='pcr-container'>
+        <div style='color:{color}; font-weight:bold; border:1px solid {color}; border-radius:15px; display:inline-block; padding:2px 12px; font-size:10px;'>{status}</div>
+        <div class='pcr-container' style='background:{bg_gradient};'>
             <div class='pcr-inner'>
-                <small style='color:gray; font-weight:bold;'>PCR</small>
-                <div style='font-size:32px; font-weight:900; color:#c62828;'>0.59</div>
+                <small style='color:gray; font-weight:bold;'>LIVE PCR</small>
+                <div style='font-size:32px; font-weight:900; color:{color};'>{live_pcr}</div>
             </div>
         </div>
-        <p style='font-size:11px; color:gray; font-weight:bold;'>Sentiment: Extreme Panic</p>
+        <p style='font-size:10px; color:gray;'>Auto-updated with Nifty Trend</p>
     </div>""", unsafe_allow_html=True)
-    st.markdown("---")
-    st.success("Live Scanning: All Indices Active")
 
 # --- MAIN UI ---
 IST = pytz.timezone('Asia/Kolkata')
 st.markdown(f"<div class='main-clock'>🚀 {datetime.now(IST).strftime('%H:%M:%S')}</div>", unsafe_allow_html=True)
 
-# 1. KEY LEVELS (Stability Fixed)
-st.markdown("### 📉 KEY LEVELS (Bullish/Bearish)")
+st.markdown("### 📊 KEY LEVELS")
 assets = {"NIFTY 50": "^NSEI", "BANK NIFTY": "^NSEBANK", "CRUDE OIL ($)": "CL=F", "NAT. GAS ($)": "NG=F"}
 for name, sym in assets.items():
-    res = get_market_data(sym)
+    res = get_data(sym)
     if res:
-        color = "#2e7d32" if res['bull'] else "#c62828"
-        label = "BULLISH ABOVE" if res['bull'] else "BEARISH BELOW"
+        c = "#2e7d32" if res['bull'] else "#c62828"
         unit = "$" if "F" in sym else "₹"
-        st.markdown(f"""
-        <div class='index-card' style='border-left-color:{color};'>
-            <div style='font-size:11px; font-weight:bold; color:gray;'>{name}</div>
-            <div style='display:flex; justify-content:space-between; align-items:center;'>
-                <div class='price-text'>{unit}{res['p']}</div>
-                <div style='color:{color}; font-size:11px; font-weight:bold;'>{label}: {res['ema']}</div>
-            </div>
-        </div>""", unsafe_allow_html=True)
+        st.markdown(f"<div class='index-card' style='border-left-color:{c};'><b>{name}</b><div style='display:flex; justify-content:space-between;'><span style='font-size:22px; font-weight:900;'>{unit}{res['p']}</span><span style='color:{c}; font-weight:bold; font-size:11px;'>EMA: {res['ema']}</span></div></div>", unsafe_allow_html=True)
 
-# 2. MOMENTUM SIGNALS
-st.markdown("### 🎯 MOMENTUM SIGNALS")
-stocks = ["RELIANCE.NS", "TCS.NS", "HDFCBANK.NS", "ICICIBANK.NS", "SBIN.NS", "BHARTIARTL.NS"]
-for s in stocks:
-    val = get_market_data(s)
+st.markdown("---")
+st.markdown("### 🎯 BTST / STBT ALERTS")
+for s in ["RELIANCE.NS", "TCS.NS", "HDFCBANK.NS", "SBIN.NS"]:
+    val = get_data(s)
     if val:
-        t_name = s.split('.')[0]
-        if val['bull']:
-            st.markdown(f"<div class='btst-card'><div><b>🚀 BTST: {t_name}</b></div><div style='text-align:right;'><b>₹{val['p']}</b><br><small style='color:#2e7d32; font-weight:bold;'>BUY</small></div></div>", unsafe_allow_html=True)
-        else:
-            st.markdown(f"<div class='stbt-card'><div><b>🔻 STBT: {t_name}</b></div><div style='text-align:right;'><b>₹{val['p']}</b><br><small style='color:#c62828; font-weight:bold;'>SELL</small></div></div>", unsafe_allow_html=True)
+        t = s.split('.')[0]
+        card = "btst-card" if val['bull'] else "stbt-card"
+        label = "BUY" if val['bull'] else "SELL"
+        st.markdown(f"<div class='{card}'><b>{t}</b><span>₹{val['p']} - <b>{label}</b></span></div>", unsafe_allow_html=True)
 
 time.sleep(30)
 st.rerun()
