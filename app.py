@@ -5,7 +5,7 @@ import time
 import pytz 
 
 # --- 1. CONFIG ---
-st.set_page_config(page_title="TRADEX PRO V36", layout="centered")
+st.set_page_config(page_title="TRADEX PRO V38", layout="centered")
 
 st.markdown("""
     <style>
@@ -20,19 +20,14 @@ st.markdown("""
     </style>
     """, unsafe_allow_html=True)
 
-def get_final_data(ticker):
+def get_market_data(ticker):
     try:
-        df = yf.Ticker(ticker).history(period="2d", interval="15m")
+        # 1m interval for high-speed tracking
+        df = yf.Ticker(ticker).history(period="1d", interval="1m")
         if df.empty: return None
-        ltp = round(df['Close'].iloc[-1], 2)
         
-        # MCX MATCHING LOGIC
-        if ticker == "CL=F": ltp = round(ltp * 84.45, 2)
-        elif ticker == "NG=F": ltp = round(ltp * 84.45 * 1.25, 2)
-            
+        ltp = round(df['Close'].iloc[-1], 2)
         ema = round(df['Close'].ewm(span=20, adjust=False).mean().iloc[-1], 2)
-        if ticker in ["CL=F", "NG=F"]: 
-            ema = round(ema * 84.45 * (1.25 if ticker=="NG=F" else 1), 2)
         
         return {"p": ltp, "ema": ema, "bull": ltp > ema}
     except: return None
@@ -41,47 +36,47 @@ def get_final_data(ticker):
 IST = pytz.timezone('Asia/Kolkata')
 st.markdown(f"<div class='main-clock'>🚀 {datetime.now(IST).strftime('%H:%M:%S')}</div>", unsafe_allow_html=True)
 
-# 1. LEVELS SECTION (Wapas aa gaya!)
+# 1. KEY LEVELS (Nifty/BankNifty in ₹ | Crude/NG in $)
 st.markdown("### 📊 KEY LEVELS (Bullish/Bearish)")
-market_assets = {"NIFTY 50": "^NSEI", "BANK NIFTY": "^NSEBANK", "CRUDE OIL": "CL=F", "NAT. GAS": "NG=F"}
+market_assets = {
+    "NIFTY 50": "^NSEI", 
+    "BANK NIFTY": "^NSEBANK", 
+    "CRUDE OIL ($)": "CL=F", 
+    "NAT. GAS ($)": "NG=F"
+}
 
 for name, sym in market_assets.items():
-    res = get_final_data(sym)
+    res = get_market_data(sym)
     if res:
         color = "#2e7d32" if res['bull'] else "#c62828"
         label = "BULLISH ABOVE" if res['bull'] else "BEARISH BELOW"
+        unit = "$" if "F" in sym else "₹"
         st.markdown(f"""
         <div class='index-card' style='border-left-color:{color};'>
             <div style='font-size:12px; font-weight:bold; color:gray;'>{name}</div>
             <div style='display:flex; justify-content:space-between; align-items:center;'>
-                <div class='price-text'>₹{res['p']}</div>
+                <div class='price-text'>{unit}{res['p']}</div>
                 <div class='level-tag' style='color:{color}; background:{color}15;'>
                     {label}: {res['ema']}
                 </div>
             </div>
         </div>""", unsafe_allow_html=True)
 
-# 2. MOMENTUM ALERTS
-st.markdown("---")
+# 2. MOMENTUM SIGNALS (Nifty 50 Stocks)
 st.markdown("### 🎯 MOMENTUM SIGNALS")
 pro_stocks = ["RELIANCE.NS", "TCS.NS", "HDFCBANK.NS", "ICICIBANK.NS", "SBIN.NS", "BHARTIARTL.NS"]
 
 for s in pro_stocks:
-    val = get_final_data(s)
+    val = get_market_data(s)
     if val:
         t_name = s.split('.')[0]
-        if val['bull']:
-            st.markdown(f"""
-            <div class='action-card buy-zone'>
-                <div><b>🚀 BTST: {t_name}</b></div>
-                <div style='text-align:right;'><b>₹{val['p']}</b><br><small style='color:#2e7d32; font-weight:bold;'>LONG</small></div>
-            </div>""", unsafe_allow_html=True)
-        else:
-            st.markdown(f"""
-            <div class='action-card sell-zone'>
-                <div><b>🔻 STBT: {t_name}</b></div>
-                <div style='text-align:right;'><b>₹{val['p']}</b><br><small style='color:#c62828; font-weight:bold;'>SHORT</small></div>
-            </div>""", unsafe_allow_html=True)
+        style = "buy-zone" if val['bull'] else "sell-zone"
+        side = "LONG" if val['bull'] else "SHORT"
+        st.markdown(f"""
+        <div class='action-card {style}'>
+            <div><b>🚀 {t_name}</b></div>
+            <div style='text-align:right;'><b>₹{val['p']}</b><br><small style='font-weight:bold;'>{side}</small></div>
+        </div>""", unsafe_allow_html=True)
 
 time.sleep(30)
 st.rerun()
