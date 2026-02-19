@@ -4,25 +4,26 @@ from datetime import datetime
 import time
 import pytz 
 
-st.set_page_config(page_title="TRADEX MOBILE V6", layout="centered")
+# Mobile Page Config
+st.set_page_config(page_title="TRADEX MOBILE V7", layout="centered")
 
-# --- ULTIMATE MOBILE CSS ---
+# --- MOBILE CSS (Clean & Compact) ---
 st.markdown("""
     <style>
     .stApp { background-color: #fdfdfd; }
     .mobile-clock { font-size: 32px; font-weight: 900; color: #ff5252; text-align: center; border-bottom: 2px solid #eee; padding-bottom: 10px; margin-bottom: 15px; }
     
-    /* Index & Commodity Cards */
+    /* Index Cards */
     .mobile-card { background: white; border-radius: 12px; padding: 15px; margin-bottom: 10px; border-left: 8px solid #1a237e; box-shadow: 0 4px 6px rgba(0,0,0,0.05); }
     .price-large { font-size: 26px; font-weight: 900; color: #212121; margin: 5px 0; }
     .bull-level { font-size: 11px; font-weight: 900; text-transform: uppercase; }
 
-    /* BTST Special Design */
+    /* Scanner Style */
+    .scanner-row { background: white; border-radius: 12px; padding: 15px; margin-bottom: 10px; border-left: 10px solid #2e7d32; box-shadow: 0 2px 8px rgba(0,0,0,0.05); }
+
+    /* BTST Section */
     .btst-container { background: #fff9c4; border: 2px solid #fbc02d; border-radius: 15px; padding: 15px; margin: 20px 0; }
     .btst-card { background: white; border-radius: 10px; padding: 12px; margin-top: 10px; border-right: 8px solid #fbc02d; display: flex; justify-content: space-between; align-items: center; }
-    
-    /* Scanner Style */
-    .scanner-row { background: white; border-radius: 12px; padding: 15px; margin-bottom: 10px; border-left: 10px solid #2e7d32; }
     </style>
     """, unsafe_allow_html=True)
 
@@ -43,13 +44,11 @@ def get_data(ticker):
 # --- UI RENDER ---
 st.markdown(f"<div class='mobile-clock'>🚀 {datetime.now(pytz.timezone('Asia/Kolkata')).strftime('%H:%M:%S')}</div>", unsafe_allow_html=True)
 
-# 1. INDEX STATUS
+# 1. INDEX STATUS (Nifty, Sensex, Crude, NG)
 assets = {"NIFTY": "^NSEI", "SENSEX": "^BSESN", "CRUDE": "CL=F", "NAT. GAS": "NG=F"}
-results = {}
 cols = st.columns(2)
 for i, (name, sym) in enumerate(assets.items()):
     res = get_data(sym)
-    results[name] = res
     if res:
         color = "#2e7d32" if res['status'] == "BULLISH" else "#c62828"
         label = "BULLISH ABOVE" if res['status'] == "BULLISH" else "BEARISH BELOW"
@@ -60,30 +59,31 @@ for i, (name, sym) in enumerate(assets.items()):
                 <div class='bull-level' style='color:{color};'>{label} {res['ema']}</div>
             </div>""", unsafe_allow_html=True)
 
-# 2. RADAR SIGNALS
-st.markdown("### 🔥 RADAR SIGNALS")
-for name, strike in [("NIFTY", "25800 CE"), ("SENSEX", "83700 CE")]:
-    res = results.get(name)
-    if res:
-        bg = "#ffebee" if res['rsi'] > 80 else "#e3f2fd"
-        border = "#ff5252" if res['rsi'] > 80 else "#1565c0"
-        msg = f"BUY ABOVE: {res['p']} 👁️🙏" if res['rsi'] <= 80 else "🚨 CRITICAL RSI"
-        st.markdown(f"<div style='background:{bg}; border-left:8px solid {border}; border-radius:8px; padding:15px; margin-bottom:10px;'><b>{strike}</b><br>{msg}</div>", unsafe_allow_html=True)
-
-# 3. LIVE SCANNER
+# 2. LIVE SCANNER (Directly after Index)
 st.markdown("### 📊 LIVE SCANNER")
 for sym in ["RELIANCE.NS", "HDFCBANK.NS", "ADANIENT.NS"]:
     res = get_data(sym)
     if res:
         color = "#2e7d32" if res['status']=="BULLISH" else "#c62828"
-        st.markdown(f"""<div class='scanner-row' style='border-left-color:{color};'><div style='display:flex; justify-content:space-between;'><div><b>⭐ {sym.split('.')[0]}</b><br><span class='price-large'>₹{res['p']}</span></div><div style='text-align:right;'><span style='color:#2e7d32; font-weight:900;'>T: {round(res['p']*1.007, 2)}</span><br><span style='color:#c62828; font-weight:900;'>S: {res['ema']}</span></div></div></div>""", unsafe_allow_html=True)
+        st.markdown(f"""<div class='scanner-row' style='border-left-color:{color};'>
+            <div style='display:flex; justify-content:space-between;'>
+                <div><b>⭐ {sym.split('.')[0]}</b><br><span class='price-large'>₹{res['p']}</span></div>
+                <div style='text-align:right;'>
+                    <span style='color:#2e7d32; font-weight:900;'>T: {round(res['p']*1.007, 2)}</span><br>
+                    <span style='color:#c62828; font-weight:900;'>S: {res['ema']}</span>
+                </div>
+            </div>
+        </div>""", unsafe_allow_html=True)
 
-# 4. BTST SECTION
+# 3. BTST / SWING ALERTS
 st.markdown("<div class='btst-container'><h3 style='margin:0; color:#1a237e;'>💰 BTST / SWING ALERTS</h3>", unsafe_allow_html=True)
-for sym in ["TCS.NS", "ICICIBANK.NS"]:
+for sym in ["TCS.NS", "INFY.NS", "ICICIBANK.NS"]:
     res = get_data(sym)
     if res and res['status'] == "BULLISH":
-        st.markdown(f"""<div class='btst-card'><div><b>🚀 {sym.split('.')[0]}</b><br><span style='font-size:11px; color:#757575;'>Potential BTST Pick</span></div><div style='text-align:right;'><b>₹{res['p']}</b><br><span style='color:#2e7d32; font-size:11px; font-weight:bold;'>MODE: STRONG</span></div></div>""", unsafe_allow_html=True)
+        st.markdown(f"""<div class='btst-card'>
+            <div><b>🚀 {sym.split('.')[0]}</b><br><span style='font-size:11px; color:#757575;'>Potential BTST Pick</span></div>
+            <div style='text-align:right;'><b>₹{res['p']}</b><br><span style='color:#2e7d32; font-size:11px; font-weight:bold;'>MODE: STRONG</span></div>
+        </div>""", unsafe_allow_html=True)
 st.markdown("</div>", unsafe_allow_html=True)
 
 time.sleep(30)
