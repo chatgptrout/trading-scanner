@@ -4,83 +4,84 @@ from datetime import datetime
 import time
 import pytz 
 
-# --- SETTINGS ---
-st.set_page_config(page_title="TRADEX PRO V19", layout="centered")
+# --- 1. SETTINGS ---
+st.set_page_config(page_title="TRADEX PRO V20", layout="centered")
 
 st.markdown("""
     <style>
     .stApp { background-color: #ffffff; }
-    .main-clock { font-size: 35px; font-weight: 900; color: #ff5252; text-align: center; border-bottom: 2px solid #f0f0f0; padding-bottom: 10px; margin-bottom: 20px; }
-    .index-card { background: white; border-radius: 15px; padding: 18px; margin-bottom: 12px; border-left: 10px solid #1a237e; box-shadow: 0 4px 12px rgba(0,0,0,0.06); }
-    .price-text { font-size: 30px; font-weight: 900; color: #121212; }
-    .bull-label { color: #2e7d32; font-weight: 900; font-size: 12px; }
-    .bear-label { color: #c62828; font-weight: 900; font-size: 12px; }
+    .main-clock { font-size: 35px; font-weight: 900; color: #ff5252; text-align: center; border-bottom: 2px solid #eee; padding-bottom: 10px; margin-bottom: 20px; }
+    .index-card { background: white; border-radius: 12px; padding: 15px; margin-bottom: 10px; border-left: 10px solid #1a237e; box-shadow: 0 4px 6px rgba(0,0,0,0.05); }
+    .price-text { font-size: 26px; font-weight: 900; color: #121212; }
+    .btst-item { background: #fffde7; border-radius: 10px; padding: 12px; margin-top: 8px; border-right: 8px solid #fbc02d; display: flex; justify-content: space-between; align-items: center; }
     </style>
     """, unsafe_allow_html=True)
 
-def fetch_live_price(ticker, is_commodity=False):
+# --- 2. DATA ENGINE (MATCHING LOGIC) ---
+def fetch_matching_data(ticker, is_mcx=False):
     try:
-        # Fetching 1-day data with 1-minute interval for highest accuracy
+        # 1m interval for latest LTP
         data = yf.Ticker(ticker).history(period="1d", interval="1m")
         if data.empty: return None
         
-        current_price = data['Close'].iloc[-1]
+        ltp = data['Close'].iloc[-1]
         
-        # Crude aur NG ke liye International to MCX Conversion (Approx)
-        # Kyunki Yahoo directly MCX Rupees nahi deta, hum conversion formula use kar rahe hain
-        if is_commodity:
-            if "CL=F" in ticker: # Crude Oil
-                current_price = current_price * 84.40 # Current USD-INR Rate
-            elif "NG=F" in ticker: # Natural Gas
-                current_price = current_price * 84.40 * 1.25 # Factor for MCX units
-        
-        ema = data['Close'].ewm(span=20, adjust=False).mean().iloc[-1]
-        if is_commodity: ema = ema * 84.40
+        # MCX Conversion for Crude/NG to match Indian Apps
+        if is_mcx:
+            if "CL=F" in ticker: ltp = ltp * 84.45 # USD-INR current
+            elif "NG=F" in ticker: ltp = ltp * 84.45 * 1.22 # Units adjustment
             
-        return {"p": round(current_price, 2), "ema": round(ema, 2), "is_bull": current_price > ema}
+        ema = data['Close'].ewm(span=20, adjust=False).mean().iloc[-1]
+        if is_mcx: ema = ema * 84.45
+
+        return {"p": round(ltp, 2), "ema": round(ema, 2), "bull": ltp > ema}
     except: return None
 
-# UI HEADER
+# --- 3. UI RENDER ---
 IST = pytz.timezone('Asia/Kolkata')
 st.markdown(f"<div class='main-clock'>🚀 {datetime.now(IST).strftime('%H:%M:%S')}</div>", unsafe_allow_html=True)
 
-# 1. LIVE INDEX & COMMODITY (The "Dhan" Match Attempt)
-market_assets = {
+# 1. INDEX & COMMODITY
+assets = {
     "NIFTY 50": "^NSEI",
     "BANK NIFTY": "^NSEBANK",
     "CRUDE OIL (MCX)": "CL=F",
     "NATURAL GAS (MCX)": "NG=F"
 }
 
-for name, sym in market_assets.items():
-    is_comm = True if "CL=F" in sym or "NG=F" in sym else False
-    res = fetch_live_price(sym, is_commodity=is_comm)
-    
+for name, sym in assets.items():
+    is_comm = True if "F" in sym else False
+    res = fetch_matching_data(sym, is_mcx=is_comm)
     if res:
-        color = "#2e7d32" if res['is_bull'] else "#c62828"
-        status = "BULLISH ABOVE" if res['is_bull'] else "BEARISH BELOW"
-        
+        color = "#2e7d32" if res['bull'] else "#c62828"
+        label = "BULLISH ABOVE" if res['bull'] else "BEARISH BELOW"
         st.markdown(f"""
         <div class='index-card' style='border-left-color: {color};'>
-            <div style='color: #757575; font-weight: bold;'>{name}</div>
-            <div style='display: flex; justify-content: space-between; align-items: baseline;'>
+            <div style='font-size:12px; font-weight:bold; color:#757575;'>{name}</div>
+            <div style='display:flex; justify-content:space-between; align-items:center;'>
                 <div class='price-text'>₹{res['p']}</div>
-                <div style='color: {color}; font-weight: 900;'>{status}: {res['ema']}</div>
+                <div style='color:{color}; font-weight:900; font-size:11px;'>{label}: {res['ema']}</div>
             </div>
         </div>""", unsafe_allow_html=True)
 
-# 2. STOCK SCANNER
-st.markdown("### 📊 LIVE STOCK WATCH")
-stocks = ["RELIANCE.NS", "HDFCBANK.NS", "SBIN.NS", "ICICIBANK.NS"]
-for s in stocks:
-    val = fetch_live_price(s)
-    if val:
-        s_color = "#2e7d32" if val['is_bull'] else "#c62828"
+# 2. BTST / SWING ALERTS (FIXED)
+st.markdown("### 💰 BTST / SWING ALERTS")
+btst_list = ["RELIANCE.NS", "TCS.NS", "INFY.NS", "SBIN.NS"]
+found_btst = False
+
+for b in btst_list:
+    val = fetch_matching_data(b)
+    # Agar Bullish hai toh hi dikhao, warna "Scanning..." dikhao
+    if val and val['bull']:
+        found_btst = True
         st.markdown(f"""
-        <div style='background: #f8f9fa; padding: 12px; border-radius: 10px; margin-bottom: 8px; border-left: 5px solid {s_color}; display: flex; justify-content: space-between;'>
-            <b>{s.split('.')[0]}</b>
-            <b style='color: {s_color};'>₹{val['p']}</b>
+        <div class='btst-item'>
+            <div><b>🚀 {b.split('.')[0]}</b><br><span style='font-size:10px; color:gray;'>High Momentum Pick</span></div>
+            <div style='text-align:right;'><b>₹{val['p']}</b><br><span style='color:#2e7d32; font-size:10px;'>STRONG</span></div>
         </div>""", unsafe_allow_html=True)
+
+if not found_btst:
+    st.info("Searching for Strong BTST setups... No stocks currently in Buy Zone.")
 
 time.sleep(30)
 st.rerun()
