@@ -5,7 +5,7 @@ import time
 import pytz 
 
 # --- 1. CONFIG ---
-st.set_page_config(page_title="TRADEX PRO V34", layout="centered")
+st.set_page_config(page_title="TRADEX PRO V35", layout="centered")
 
 st.markdown("""
     <style>
@@ -20,18 +20,19 @@ st.markdown("""
     </style>
     """, unsafe_allow_html=True)
 
-def get_pro_data(ticker):
+def get_clean_data(ticker):
     try:
         df = yf.Ticker(ticker).history(period="2d", interval="15m")
         if df.empty: return None
         ltp = round(df['Close'].iloc[-1], 2)
         
-        # MCX MATCHING
+        # MCX MATCHING LOGIC
         if ticker == "CL=F": ltp = round(ltp * 84.45, 2)
         elif ticker == "NG=F": ltp = round(ltp * 84.45 * 1.25, 2)
             
         ema = round(df['Close'].ewm(span=20, adjust=False).mean().iloc[-1], 2)
-        if ticker in ["CL=F", "NG=F"]: ema = round(ema * 84.45 * (1.25 if ticker=="NG=F" else 1), 2)
+        if ticker in ["CL=F", "NG=F"]: 
+            ema = round(ema * 84.45 * (1.25 if ticker=="NG=F" else 1), 2)
         
         return {"p": ltp, "ema": ema, "bull": ltp > ema}
     except: return None
@@ -40,15 +41,20 @@ def get_pro_data(ticker):
 IST = pytz.timezone('Asia/Kolkata')
 st.markdown(f"<div class='main-clock'>🚀 {datetime.now(IST).strftime('%H:%M:%S')}</div>", unsafe_allow_html=True)
 
-# 1. LEVELS SECTION (WAPAS AA GAYA!)
+# 1. LEVELS SECTION
 st.markdown("### 📊 KEY LEVELS (Bullish/Bearish)")
 market_assets = {"NIFTY 50": "^NSEI", "BANK NIFTY": "^NSEBANK", "CRUDE OIL": "CL=F", "NAT. GAS": "NG=F"}
 
 for name, sym in market_assets.items():
-    res = get_pro_data(sym)
+    res = get_clean_data(sym)
     if res:
         color = "#2e7d32" if res['bull'] else "#c62828"
         label = "BULLISH ABOVE" if res['bull'] else "BEARISH BELOW"
+        # Corrected Markdown for Index Cards
         st.markdown(f"""
         <div class='index-card' style='border-left-color:{color};'>
-            <div style='font-size:12px; font
+            <div style='font-size:12px; font-weight:bold; color:gray;'>{name}</div>
+            <div style='display:flex; justify-content:space-between; align-items:center;'>
+                <div class='price-text'>₹{res['p']}</div>
+                <div class='level-tag' style='color:{color}; background:{color}15;'>
+                    {label}: {
