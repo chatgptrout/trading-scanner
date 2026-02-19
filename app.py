@@ -5,9 +5,9 @@ import time
 import pytz 
 
 # Mobile Page Config
-st.set_page_config(page_title="TRADEX MOBILE V7", layout="centered")
+st.set_page_config(page_title="TRADEX MOBILE V8", layout="centered")
 
-# --- MOBILE CSS (Clean & Compact) ---
+# --- CLEAN MOBILE CSS (No Radar Styling) ---
 st.markdown("""
     <style>
     .stApp { background-color: #fdfdfd; }
@@ -33,12 +33,7 @@ def get_data(ticker):
         if df.empty: return None
         cp = round(df['Close'].iloc[-1], 2)
         ema = round(df['Close'].ewm(span=20, adjust=False).mean().iloc[-1], 2)
-        delta = df['Close'].diff()
-        gain = (delta.where(delta > 0, 0)).rolling(14).mean()
-        loss = (-delta.where(delta < 0, 0)).rolling(14).mean()
-        rs = gain / loss
-        rsi = round(100 - (100 / (1 + rs)).iloc[-1], 2)
-        return {"p": cp, "ema": ema, "rsi": rsi, "status": "BULLISH" if cp > ema else "BEARISH"}
+        return {"p": cp, "ema": ema, "status": "BULLISH" if cp > ema else "BEARISH"}
     except: return None
 
 # --- UI RENDER ---
@@ -59,7 +54,9 @@ for i, (name, sym) in enumerate(assets.items()):
                 <div class='bull-level' style='color:{color};'>{label} {res['ema']}</div>
             </div>""", unsafe_allow_html=True)
 
-# 2. LIVE SCANNER (Directly after Index)
+# --- RADAR BLOCK REMOVED COMPLETELY ---
+
+# 2. LIVE SCANNER (Directly after Index Status)
 st.markdown("### 📊 LIVE SCANNER")
 for sym in ["RELIANCE.NS", "HDFCBANK.NS", "ADANIENT.NS"]:
     res = get_data(sym)
