@@ -5,7 +5,7 @@ import time
 import pytz 
 
 # --- 1. CONFIG ---
-st.set_page_config(page_title="TRADEX PRO V44", layout="wide")
+st.set_page_config(page_title="TRADEX PRO V45", layout="wide")
 
 st.markdown("""
     <style>
@@ -13,8 +13,11 @@ st.markdown("""
     .main-clock { font-size: 32px; font-weight: 900; color: #ff5252; text-align: center; border-bottom: 2px solid #eee; padding-bottom: 10px; margin-bottom: 20px; }
     .index-card { background: white; border-radius: 12px; padding: 15px; margin-bottom: 10px; border-left: 10px solid #1a237e; box-shadow: 0 4px 6px rgba(0,0,0,0.05); }
     .price-text { font-size: 22px; font-weight: 900; color: #121212; }
-    .sidebar-pcr { text-align: center; padding: 20px; background: #fafafa; border-radius: 15px; border: 1px solid #eee; }
-    .pcr-val { font-size: 40px; font-weight: 900; color: #c62828; }
+    
+    /* Circular PCR Meter */
+    .pcr-container { position: relative; width: 150px; height: 150px; margin: 20px auto; border-radius: 50%; background: conic-gradient(#c62828 0% 40%, #2e7d32 40% 100%); display: flex; align-items: center; justify-content: center; }
+    .pcr-inner { width: 120px; height: 120px; background: white; border-radius: 50%; display: flex; flex-direction: column; align-items: center; justify-content: center; }
+    
     .btst-card { background: #e8f5e9; border-radius: 10px; padding: 12px; margin-top: 8px; border-right: 10px solid #2e7d32; display: flex; justify-content: space-between; align-items: center; }
     .stbt-card { background: #ffebee; border-radius: 10px; padding: 12px; margin-top: 8px; border-right: 10px solid #c62828; display: flex; justify-content: space-between; align-items: center; }
     </style>
@@ -29,26 +32,30 @@ def get_market_data(ticker):
         return {"p": ltp, "ema": ema, "bull": ltp > ema}
     except: return None
 
-# --- SIDEBAR: MARKET DISTRIBUTION ---
+# --- SIDEBAR: PRO MARKET DISTRIBUTION ---
 with st.sidebar:
-    st.markdown("### 📉 Market Distribution")
-    # Exact match from your image
+    st.markdown("### 📊 Market Distribution")
+    # Exact Circular Logic from your image
     st.markdown(f"""
-    <div class='sidebar-pcr'>
-        <div style='color:#c62828; font-weight:bold; border:1px solid #c62828; border-radius:15px; display:inline-block; padding:2px 10px; font-size:10px;'>BEARISH</div>
-        <div style='margin-top:15px; color:gray; font-weight:bold; font-size:12px;'>PCR</div>
-        <div class='pcr-val'>0.59</div>
-        <div style='width:100%; height:8px; background:linear-gradient(to right, #c62828 40%, #2e7d32 40%); border-radius:4px;'></div>
-        <p style='font-size:10px; color:gray; margin-top:10px;'>Sentiment: Extreme Panic</p>
+    <div style='text-align:center; padding:15px; background:#f8f9fa; border-radius:20px; border:1px solid #eee;'>
+        <div style='color:#c62828; font-weight:bold; border:1px solid #c62828; border-radius:15px; display:inline-block; padding:2px 12px; font-size:11px;'>BEARISH</div>
+        <div class='pcr-container'>
+            <div class='pcr-inner'>
+                <small style='color:gray; font-weight:bold;'>PCR</small>
+                <div style='font-size:32px; font-weight:900; color:#c62828;'>0.59</div>
+            </div>
+        </div>
+        <p style='font-size:11px; color:gray; font-weight:bold;'>Sentiment: Extreme Panic</p>
     </div>""", unsafe_allow_html=True)
-    st.info("Scanner Running: 50+ Stocks")
+    st.markdown("---")
+    st.success("Live Scanning: All Indices Active")
 
 # --- MAIN UI ---
 IST = pytz.timezone('Asia/Kolkata')
 st.markdown(f"<div class='main-clock'>🚀 {datetime.now(IST).strftime('%H:%M:%S')}</div>", unsafe_allow_html=True)
 
-# 1. KEY LEVELS
-st.markdown("### 📊 KEY LEVELS (Bullish/Bearish)")
+# 1. KEY LEVELS (Stability Fixed)
+st.markdown("### 📉 KEY LEVELS (Bullish/Bearish)")
 assets = {"NIFTY 50": "^NSEI", "BANK NIFTY": "^NSEBANK", "CRUDE OIL ($)": "CL=F", "NAT. GAS ($)": "NG=F"}
 for name, sym in assets.items():
     res = get_market_data(sym)
