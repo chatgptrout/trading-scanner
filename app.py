@@ -5,7 +5,7 @@ import time
 import pytz 
 
 # --- 1. CONFIG ---
-st.set_page_config(page_title="TRADEX PRO V23", layout="centered")
+st.set_page_config(page_title="TRADEX PRO V24", layout="centered")
 
 st.markdown("""
     <style>
@@ -14,55 +14,75 @@ st.markdown("""
     .index-card { background: white; border-radius: 12px; padding: 15px; margin-bottom: 10px; border-left: 10px solid #1a237e; box-shadow: 0 4px 6px rgba(0,0,0,0.05); }
     .price-text { font-size: 24px; font-weight: 900; color: #121212; }
     
-    /* Alerts Styling */
-    .alert-box { border-radius: 15px; padding: 15px; margin-top: 20px; border: 1px solid #ddd; }
+    /* Hybrid Alert Styles */
     .btst-card { background: #e8f5e9; border-radius: 8px; padding: 12px; margin-top: 8px; border-right: 8px solid #2e7d32; display: flex; justify-content: space-between; align-items: center; }
     .stbt-card { background: #ffebee; border-radius: 8px; padding: 12px; margin-top: 8px; border-right: 8px solid #c62828; display: flex; justify-content: space-between; align-items: center; }
     </style>
     """, unsafe_allow_html=True)
 
-# --- 2. DATA ENGINE ---
-def get_live_market(ticker, is_mcx=False):
+# --- 2. ADVANCED MCX ENGINE ---
+def get_mcx_matched_data(ticker):
     try:
         data = yf.Ticker(ticker).history(period="1d", interval="1m")
         if data.empty: return None
-        ltp = data['Close'].iloc[-1]
         
-        # MCX Adjustment Logic
-        if is_mcx:
-            ltp = ltp * 84.55 * (1.25 if "NG=F" in ticker else 1)
+        raw_price = data['Close'].iloc[-1]
+        raw_ema = data['Close'].ewm(span=20, adjust=False).mean().iloc[-1]
+        
+        # MCX MATCHING FORMULA (Current USD-INR + Multiplier)
+        if ticker == "CL=F": # CRUDE OIL
+            # 1 Barrel = 100 Units in MCX Approx
+            mcx_price = raw_price * 84.45 
+        elif ticker == "NG=F": # NATURAL GAS
+            # NG Indian price is usually (Intl Price * 1.2 to 1.3) * USD-INR
+            mcx_price = raw_price * 84.45 * 1.24
+        else:
+            mcx_price = raw_price
             
-        ema = data['Close'].ewm(span=20, adjust=False).mean().iloc[-1]
-        if is_mcx: ema = ema * 84.55
-        
-        return {"p": round(ltp, 2), "ema": round(ema, 2), "bull": ltp > ema}
+        mcx_ema = raw_ema * (84.45 if ticker in ["CL=F", "NG=F"] else 1)
+        if ticker == "NG=F": mcx_ema = mcx_ema * 1.24
+
+        return {"p": round(mcx_price, 2), "ema": round(mcx_ema, 2), "bull": mcx_price > mcx_ema}
     except: return None
 
 # --- 3. UI ---
 IST = pytz.timezone('Asia/Kolkata')
 st.markdown(f"<div class='main-clock'>🚀 {datetime.now(IST).strftime('%H:%M:%S')}</div>", unsafe_allow_html=True)
 
-# 1. INDICES
-indices = {"NIFTY 50": "^NSEI", "BANK NIFTY": "^NSEBANK", "CRUDE OIL": "CL=F", "NAT. GAS": "NG=F"}
-for name, sym in indices.items():
-    res = get_live_market(sym, is_mcx=("F" in sym))
+# 1. INDICES & MCX MATCH
+market_list = {
+    "NIFTY 50": "^NSEI",
+    "BANK NIFTY": "^NSEBANK",
+    "CRUDE OIL (MCX)": "CL=F",
+    "NAT. GAS (MCX)": "NG=F"
+}
+
+for name, sym in market_list.items():
+    res = get_mcx_matched_data(sym)
     if res:
         color = "#2e7d32" if res['bull'] else "#c62828"
         lbl = "BULLISH ABOVE" if res['bull'] else "BEARISH BELOW"
-        st.markdown(f"<div class='index-card' style='border-left-color:{color};'><div style='font-size:12px; font-weight:bold; color:#757575;'>{name}</div><div style='display:flex; justify-content:space-between; align-items:center;'><div class='price-text'>₹{res['p']}</div><div style='color:{color}; font-weight:900; font-size:11px;'>{lbl}: {res['ema']}</div></div></div>", unsafe_allow_html=True)
+        st.markdown(f"""
+        <div class='index-card' style='border-left-color:{color};'>
+            <div style='font-size:12px; font-weight:bold; color:#757575;'>{name}</div>
+            <div style='display:flex; justify-content:space-between; align-items:center;'>
+                <div class='price-text'>₹{res['p']}</div>
+                <div style='color:{color}; font-weight:900; font-size:11px;'>{lbl}: {res['ema']}</div>
+            </div>
+        </div>""", unsafe_allow_html=True)
 
-# 2. HYBRID ALERTS (BTST + STBT)
+# 2. HYBRID ALERTS (BTST/STBT)
 st.markdown("### 💰 BTST / STBT ALERTS")
-stock_list = ["RELIANCE.NS", "TCS.NS", "INFY.NS", "SBIN.NS", "HDFCBANK.NS", "ICICIBANK.NS"]
+stocks = ["RELIANCE.NS", "TCS.NS", "SBIN.NS", "HDFCBANK.NS"]
 
-for s in stock_list:
-    val = get_live_market(s)
+for s in stocks:
+    val = get_mcx_matched_data(s)
     if val:
-        ticker_name = s.split('.')[0]
-        if val['bull']: # BTST Case
-            st.markdown(f"<div class='btst-card'><div><b>🚀 BTST: {ticker_name}</b><br><small>Trend: Bullish</small></div><div style='text-align:right;'><b>₹{val['p']}</b><br><span style='color:#2e7d32; font-weight:bold;'>BUY</span></div></div>", unsafe_allow_html=True)
-        else: # STBT Case
-            st.markdown(f"<div class='stbt-card'><div><b>🔻 STBT: {ticker_name}</b><br><small>Trend: Bearish</small></div><div style='text-align:right;'><b>₹{val['p']}</b><br><span style='color:#c62828; font-weight:bold;'>SELL</span></div></div>", unsafe_allow_html=True)
+        t_name = s.split('.')[0]
+        if val['bull']: # BTST (Green Card)
+            st.markdown(f"<div class='btst-card'><div><b>🚀 BTST: {t_name}</b><br><small>Trend: Bullish</small></div><div style='text-align:right;'><b>₹{val['p']}</b><br><span style='color:#2e7d32; font-weight:bold;'>BUY</span></div></div>", unsafe_allow_html=True)
+        else: # STBT (Red Card)
+            st.markdown(f"<div class='stbt-card'><div><b>🔻 STBT: {t_name}</b><br><small>Trend: Bearish</small></div><div style='text-align:right;'><b>₹{val['p']}</b><br><span style='color:#c62828; font-weight:bold;'>SELL</span></div></div>", unsafe_allow_html=True)
 
 time.sleep(30)
 st.rerun()
