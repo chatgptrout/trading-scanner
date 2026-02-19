@@ -5,23 +5,20 @@ import time
 import pytz 
 
 # Mobile Page Config
-st.set_page_config(page_title="TRADEX MOBILE V8", layout="centered")
+st.set_page_config(page_title="TRADEX MOBILE V9", layout="centered")
 
-# --- CLEAN MOBILE CSS (No Radar Styling) ---
+# --- MOBILE CSS (RADAR BLOCK REMOVED) ---
 st.markdown("""
     <style>
     .stApp { background-color: #fdfdfd; }
-    .mobile-clock { font-size: 32px; font-weight: 900; color: #ff5252; text-align: center; border-bottom: 2px solid #eee; padding-bottom: 10px; margin-bottom: 15px; }
+    .mobile-clock { font-size: 32px; font-weight: 900; color: #ff5252; text-align: center; border-bottom: 2px solid #eee; padding-bottom: 10px; margin-bottom: 20px; }
     
-    /* Index Cards */
     .mobile-card { background: white; border-radius: 12px; padding: 15px; margin-bottom: 10px; border-left: 8px solid #1a237e; box-shadow: 0 4px 6px rgba(0,0,0,0.05); }
     .price-large { font-size: 26px; font-weight: 900; color: #212121; margin: 5px 0; }
     .bull-level { font-size: 11px; font-weight: 900; text-transform: uppercase; }
 
-    /* Scanner Style */
     .scanner-row { background: white; border-radius: 12px; padding: 15px; margin-bottom: 10px; border-left: 10px solid #2e7d32; box-shadow: 0 2px 8px rgba(0,0,0,0.05); }
 
-    /* BTST Section */
     .btst-container { background: #fff9c4; border: 2px solid #fbc02d; border-radius: 15px; padding: 15px; margin: 20px 0; }
     .btst-card { background: white; border-radius: 10px; padding: 12px; margin-top: 10px; border-right: 8px solid #fbc02d; display: flex; justify-content: space-between; align-items: center; }
     </style>
@@ -39,7 +36,7 @@ def get_data(ticker):
 # --- UI RENDER ---
 st.markdown(f"<div class='mobile-clock'>🚀 {datetime.now(pytz.timezone('Asia/Kolkata')).strftime('%H:%M:%S')}</div>", unsafe_allow_html=True)
 
-# 1. INDEX STATUS (Nifty, Sensex, Crude, NG)
+# 1. INDEX STATUS
 assets = {"NIFTY": "^NSEI", "SENSEX": "^BSESN", "CRUDE": "CL=F", "NAT. GAS": "NG=F"}
 cols = st.columns(2)
 for i, (name, sym) in enumerate(assets.items()):
@@ -54,9 +51,9 @@ for i, (name, sym) in enumerate(assets.items()):
                 <div class='bull-level' style='color:{color};'>{label} {res['ema']}</div>
             </div>""", unsafe_allow_html=True)
 
-# --- RADAR BLOCK REMOVED COMPLETELY ---
+st.markdown("---") # Separator between Index and Scanner
 
-# 2. LIVE SCANNER (Directly after Index Status)
+# 2. LIVE SCANNER (Yahan se Radar Signals gayab hai)
 st.markdown("### 📊 LIVE SCANNER")
 for sym in ["RELIANCE.NS", "HDFCBANK.NS", "ADANIENT.NS"]:
     res = get_data(sym)
@@ -74,7 +71,7 @@ for sym in ["RELIANCE.NS", "HDFCBANK.NS", "ADANIENT.NS"]:
 
 # 3. BTST / SWING ALERTS
 st.markdown("<div class='btst-container'><h3 style='margin:0; color:#1a237e;'>💰 BTST / SWING ALERTS</h3>", unsafe_allow_html=True)
-for sym in ["TCS.NS", "INFY.NS", "ICICIBANK.NS"]:
+for sym in ["TCS.NS", "INFY.NS"]:
     res = get_data(sym)
     if res and res['status'] == "BULLISH":
         st.markdown(f"""<div class='btst-card'>
