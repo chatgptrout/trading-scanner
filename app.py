@@ -5,7 +5,7 @@ import time
 import pytz 
 
 # --- 1. CONFIG ---
-st.set_page_config(page_title="TRADEX PRO V35", layout="centered")
+st.set_page_config(page_title="TRADEX PRO V36", layout="centered")
 
 st.markdown("""
     <style>
@@ -20,7 +20,7 @@ st.markdown("""
     </style>
     """, unsafe_allow_html=True)
 
-def get_clean_data(ticker):
+def get_final_data(ticker):
     try:
         df = yf.Ticker(ticker).history(period="2d", interval="15m")
         if df.empty: return None
@@ -41,20 +41,47 @@ def get_clean_data(ticker):
 IST = pytz.timezone('Asia/Kolkata')
 st.markdown(f"<div class='main-clock'>🚀 {datetime.now(IST).strftime('%H:%M:%S')}</div>", unsafe_allow_html=True)
 
-# 1. LEVELS SECTION
+# 1. LEVELS SECTION (Wapas aa gaya!)
 st.markdown("### 📊 KEY LEVELS (Bullish/Bearish)")
 market_assets = {"NIFTY 50": "^NSEI", "BANK NIFTY": "^NSEBANK", "CRUDE OIL": "CL=F", "NAT. GAS": "NG=F"}
 
 for name, sym in market_assets.items():
-    res = get_clean_data(sym)
+    res = get_final_data(sym)
     if res:
         color = "#2e7d32" if res['bull'] else "#c62828"
         label = "BULLISH ABOVE" if res['bull'] else "BEARISH BELOW"
-        # Corrected Markdown for Index Cards
         st.markdown(f"""
         <div class='index-card' style='border-left-color:{color};'>
             <div style='font-size:12px; font-weight:bold; color:gray;'>{name}</div>
             <div style='display:flex; justify-content:space-between; align-items:center;'>
                 <div class='price-text'>₹{res['p']}</div>
                 <div class='level-tag' style='color:{color}; background:{color}15;'>
-                    {label}: {
+                    {label}: {res['ema']}
+                </div>
+            </div>
+        </div>""", unsafe_allow_html=True)
+
+# 2. MOMENTUM ALERTS
+st.markdown("---")
+st.markdown("### 🎯 MOMENTUM SIGNALS")
+pro_stocks = ["RELIANCE.NS", "TCS.NS", "HDFCBANK.NS", "ICICIBANK.NS", "SBIN.NS", "BHARTIARTL.NS"]
+
+for s in pro_stocks:
+    val = get_final_data(s)
+    if val:
+        t_name = s.split('.')[0]
+        if val['bull']:
+            st.markdown(f"""
+            <div class='action-card buy-zone'>
+                <div><b>🚀 BTST: {t_name}</b></div>
+                <div style='text-align:right;'><b>₹{val['p']}</b><br><small style='color:#2e7d32; font-weight:bold;'>LONG</small></div>
+            </div>""", unsafe_allow_html=True)
+        else:
+            st.markdown(f"""
+            <div class='action-card sell-zone'>
+                <div><b>🔻 STBT: {t_name}</b></div>
+                <div style='text-align:right;'><b>₹{val['p']}</b><br><small style='color:#c62828; font-weight:bold;'>SHORT</small></div>
+            </div>""", unsafe_allow_html=True)
+
+time.sleep(30)
+st.rerun()
