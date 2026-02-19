@@ -4,95 +4,83 @@ from datetime import datetime
 import time
 import pytz 
 
-# --- 1. SETTINGS ---
-st.set_page_config(page_title="TRADEX PRO V17", layout="centered")
+# --- SETTINGS ---
+st.set_page_config(page_title="TRADEX PRO V19", layout="centered")
 
 st.markdown("""
     <style>
     .stApp { background-color: #ffffff; }
     .main-clock { font-size: 35px; font-weight: 900; color: #ff5252; text-align: center; border-bottom: 2px solid #f0f0f0; padding-bottom: 10px; margin-bottom: 20px; }
-    
-    /* Index Cards Upgrade */
     .index-card { background: white; border-radius: 15px; padding: 18px; margin-bottom: 12px; border-left: 10px solid #1a237e; box-shadow: 0 4px 12px rgba(0,0,0,0.06); }
-    .price-text { font-size: 28px; font-weight: 900; color: #121212; margin: 4px 0; }
-    .level-tag { font-size: 11px; font-weight: 900; text-transform: uppercase; }
-
-    /* Live Scanner Rows */
-    .scanner-box { background: #fafafa; border-radius: 12px; padding: 15px; margin-bottom: 12px; border-left: 12px solid #2e7d32; }
-    
-    /* BTST Zone */
-    .btst-section { background: #fff9c4; border: 2px solid #fbc02d; border-radius: 15px; padding: 20px; margin-top: 30px; }
+    .price-text { font-size: 30px; font-weight: 900; color: #121212; }
+    .bull-label { color: #2e7d32; font-weight: 900; font-size: 12px; }
+    .bear-label { color: #c62828; font-weight: 900; font-size: 12px; }
     </style>
     """, unsafe_allow_html=True)
 
-# --- 2. DATA ENGINE ---
-def fetch_market_data(ticker):
+def fetch_live_price(ticker, is_commodity=False):
     try:
-        data = yf.Ticker(ticker).history(period="2d", interval="15m")
+        # Fetching 1-day data with 1-minute interval for highest accuracy
+        data = yf.Ticker(ticker).history(period="1d", interval="1m")
         if data.empty: return None
-        cp = round(data['Close'].iloc[-1], 2)
-        ema = round(data['Close'].ewm(span=20, adjust=False).mean().iloc[-1], 2)
-        return {"p": cp, "ema": ema, "is_bull": cp > ema}
+        
+        current_price = data['Close'].iloc[-1]
+        
+        # Crude aur NG ke liye International to MCX Conversion (Approx)
+        # Kyunki Yahoo directly MCX Rupees nahi deta, hum conversion formula use kar rahe hain
+        if is_commodity:
+            if "CL=F" in ticker: # Crude Oil
+                current_price = current_price * 84.40 # Current USD-INR Rate
+            elif "NG=F" in ticker: # Natural Gas
+                current_price = current_price * 84.40 * 1.25 # Factor for MCX units
+        
+        ema = data['Close'].ewm(span=20, adjust=False).mean().iloc[-1]
+        if is_commodity: ema = ema * 84.40
+            
+        return {"p": round(current_price, 2), "ema": round(ema, 2), "is_bull": current_price > ema}
     except: return None
 
-# --- 3. UI RENDER ---
+# UI HEADER
 IST = pytz.timezone('Asia/Kolkata')
 st.markdown(f"<div class='main-clock'>🚀 {datetime.now(IST).strftime('%H:%M:%S')}</div>", unsafe_allow_html=True)
 
-# --- 4. ALL INDICES & COMMODITIES (Upgraded) ---
-# Nifty, Sensex, Bank Nifty, Crude, NG
-indices = {
-    "NIFTY 50": "^NSEI", 
-    "SENSEX": "^BSESN", 
+# 1. LIVE INDEX & COMMODITY (The "Dhan" Match Attempt)
+market_assets = {
+    "NIFTY 50": "^NSEI",
     "BANK NIFTY": "^NSEBANK",
-    "CRUDE OIL": "CL=F", 
-    "NATURAL GAS": "NG=F"
+    "CRUDE OIL (MCX)": "CL=F",
+    "NATURAL GAS (MCX)": "NG=F"
 }
 
-# Responsive Grid for Indices
-for name, sym in indices.items():
-    res = fetch_market_data(sym)
+for name, sym in market_assets.items():
+    is_comm = True if "CL=F" in sym or "NG=F" in sym else False
+    res = fetch_live_price(sym, is_commodity=is_comm)
+    
     if res:
         color = "#2e7d32" if res['is_bull'] else "#c62828"
-        label = "BULLISH ABOVE" if res['is_bull'] else "BEARISH BELOW"
+        status = "BULLISH ABOVE" if res['is_bull'] else "BEARISH BELOW"
+        
         st.markdown(f"""
         <div class='index-card' style='border-left-color: {color};'>
-            <div style='color: #757575; font-weight: bold; font-size: 14px;'>{name}</div>
-            <div style='display: flex; justify-content: space-between; align-items: center;'>
-                <div class='price-text'>{res['p']}</div>
-                <div class='level-tag' style='color: {color}; background: {color}15; padding: 4px 8px; border-radius: 4px;'>
-                    {label}: {res['ema']}
-                </div>
+            <div style='color: #757575; font-weight: bold;'>{name}</div>
+            <div style='display: flex; justify-content: space-between; align-items: baseline;'>
+                <div class='price-text'>₹{res['p']}</div>
+                <div style='color: {color}; font-weight: 900;'>{status}: {res['ema']}</div>
             </div>
         </div>""", unsafe_allow_html=True)
 
-# --- 5. LIVE SCANNER (Existing Stocks) ---
-st.markdown("### 📊 LIVE INSTITUTIONAL SCANNER")
-stocks = ["RELIANCE.NS", "HDFCBANK.NS", "ICICIBANK.NS", "SBIN.NS", "ADANIENT.NS", "TCS.NS"]
-
+# 2. STOCK SCANNER
+st.markdown("### 📊 LIVE STOCK WATCH")
+stocks = ["RELIANCE.NS", "HDFCBANK.NS", "SBIN.NS", "ICICIBANK.NS"]
 for s in stocks:
-    val = fetch_market_data(s)
+    val = fetch_live_price(s)
     if val:
-        star = "⭐" if s in ["RELIANCE.NS", "HDFCBANK.NS", "SBIN.NS"] else ""
         s_color = "#2e7d32" if val['is_bull'] else "#c62828"
         st.markdown(f"""
-        <div class='scanner-box' style='border-left-color: {s_color};'>
-            <div style='display:flex; justify-content:space-between; align-items:center;'>
-                <div><b>{star} {s.split('.')[0]}</b><div class='price-text' style='font-size:24px;'>₹{val['p']}</div></div>
-                <div style='text-align:right;'>
-                    <div style='color:#2e7d32; font-weight:900;'>TGT: {round(val['p']*1.008, 2)}</div>
-                    <div style='color:#c62828; font-weight:900;'>SL: {val['ema']}</div>
-                </div>
-            </div>
+        <div style='background: #f8f9fa; padding: 12px; border-radius: 10px; margin-bottom: 8px; border-left: 5px solid {s_color}; display: flex; justify-content: space-between;'>
+            <b>{s.split('.')[0]}</b>
+            <b style='color: {s_color};'>₹{val['p']}</b>
         </div>""", unsafe_allow_html=True)
-
-# --- 6. BTST ZONE ---
-st.markdown("<div class='btst-section'><h3>💰 BTST / SWING ALERTS</h3>", unsafe_allow_html=True)
-for b in ["TCS.NS", "INFY.NS"]:
-    b_val = fetch_market_data(b)
-    if b_val and b_val['is_bull']:
-        st.markdown(f"<div style='background:white; border-radius:10px; padding:15px; margin-top:10px; border-right:10px solid #fbc02d; display:flex; justify-content:space-between;'><div><b>🚀 {b.split('.')[0]}</b></div><div><b>₹{b_val['p']}</b></div></div>", unsafe_allow_html=True)
-st.markdown("</div>", unsafe_allow_html=True)
 
 time.sleep(30)
 st.rerun()
