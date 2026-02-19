@@ -4,10 +4,10 @@ from datetime import datetime
 import time
 import pytz 
 
-# Mobile Page Config - Version 12
-st.set_page_config(page_title="TRADEX MOBILE V12", layout="centered")
+# Version 13 - Force Refresh Layout
+st.set_page_config(page_title="TRADEX MOBILE V13", layout="centered")
 
-# --- CLEANEST MOBILE CSS (RADAR COMPLETELY REMOVED) ---
+# --- MOBILE CSS (STRICT NO RADAR) ---
 st.markdown("""
     <style>
     .stApp { background-color: #ffffff; }
@@ -22,8 +22,12 @@ st.markdown("""
     .btst-container { background: #fff9c4; border: 2px solid #fbc02d; border-radius: 15px; padding: 15px; margin: 20px 0; }
     .btst-card { background: white; border-radius: 10px; padding: 12px; margin-top: 10px; border-right: 8px solid #fbc02d; display: flex; justify-content: space-between; align-items: center; }
     
-    /* Force Hide any lingering Radar elements */
-    [data-testid="stVerticalBlock"] > div:nth-child(3) { display: none !important; } 
+    /* Hard-coding removal of Radar Signals by ID if it persists */
+    #radar-signals, .radar-box, [data-testid="stVerticalBlock"] > div:nth-child(3) { 
+        display: none !important; 
+        height: 0px !important; 
+        visibility: hidden !important; 
+    }
     </style>
     """, unsafe_allow_html=True)
 
@@ -56,7 +60,8 @@ for i, (name, sym) in enumerate(assets.items()):
 
 # 2. LIVE SCANNER (Full Stock List)
 st.markdown("### 📊 LIVE SCANNER")
-SCAN_LIST = ["RELIANCE.NS", "HDFCBANK.NS", "ADANIENT.NS", "SBIN.NS", "ICICIBANK.NS", "TCS.NS"]
+# Extended list to show more stocks as requested
+SCAN_LIST = ["RELIANCE.NS", "HDFCBANK.NS", "ADANIENT.NS", "SBIN.NS", "ICICIBANK.NS", "TCS.NS", "INFY.NS", "BHARTIARTL.NS"]
 for sym in SCAN_LIST:
     res = get_data(sym)
     if res:
@@ -74,7 +79,7 @@ for sym in SCAN_LIST:
 
 # 3. BTST / SWING ALERTS
 st.markdown("<div class='btst-container'><h3 style='margin:0; color:#1a237e;'>💰 BTST / SWING ALERTS</h3>", unsafe_allow_html=True)
-for sym in ["INFY.NS", "TCS.NS"]:
+for sym in ["INFY.NS", "TCS.NS", "SBIN.NS"]:
     res = get_data(sym)
     if res and res['status'] == "BULLISH":
         st.markdown(f"""<div class='btst-card'>
