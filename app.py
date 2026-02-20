@@ -7,21 +7,22 @@ import pytz
 
 st.set_page_config(page_title="TRADEX PRO LIVE", layout="wide")
 
-# --- 1. ERROR FIX: MARKET TIME CHECKER ---
+# --- 1. THE FINAL ERROR FIX (Line 15 & 21) ---
 def get_market_status(symbol):
     tz = pytz.timezone('Asia/Kolkata')
     now = datetime.now(tz)
     if symbol in ["^NSEI", "^BSESN"]: # Equity Timings
-        # Fix: Adding explicit keyword for minute
-        start = now.replace(hour=9, minute=15, second=0)
-        end = now.replace(hour=15, minute=30, second=0)
+        # FIXED: Added minute=30
+        start = now.replace(hour=9, minute=15, second=0, microsecond=0)
+        end = now.replace(hour=15, minute=30, second=0, microsecond=0)
         return "LIVE 🟢" if start <= now <= end and now.weekday() < 5 else "CLOSED 🔴"
     else: # Commodity Timings (MCX)
-        start = now.replace(hour=9, minute=0, second=0)
-        end = now.replace(hour=23, 55, second=0)
+        # FIXED: Added minute=55
+        start = now.replace(hour=9, minute=0, second=0, microsecond=0)
+        end = now.replace(hour=23, minute=55, second=0, microsecond=0)
         return "LIVE 🟢" if start <= now <= end and now.weekday() < 5 else "CLOSED 🔴"
 
-# --- 2. HEADER: PCR 2.01 ---
+# --- 2. HEADER: PCR 2.01 & AI CAUTION ---
 pcr_val = 2.01 # Frozen as per
 st.markdown(f"""
     <div style='text-align:center; padding:10px; border-bottom:3px solid #00c853;'>
@@ -34,7 +35,6 @@ st.markdown(f"""
 """, unsafe_allow_html=True)
 
 # --- 3. DYNAMIC CARDS (EQUITY + COMMODITY) ---
-# Nifty/Sensex at latest prices
 symbols = {"NIFTY 50": "^NSEI", "SENSEX": "^BSESN", "CRUDE OIL": "CL=F", "NATURAL GAS": "NG=F"}
 st.markdown("<br>", unsafe_allow_html=True)
 cols = st.columns(4)
@@ -47,7 +47,7 @@ for i, (name, sym) in enumerate(symbols.items()):
         ltp = round(df['Close'].iloc[-1], 2)
         hi, lo = round(df['High'].max(), 2), round(df['Low'].min(), 2)
         
-        # Color & Signal logic
+        # Color & Signal
         sig = "BUY" if name in ["NIFTY 50", "SENSEX"] else "SELL"
         color = "#00c853" if sig == "BUY" else "#ff1744"
         
@@ -64,7 +64,6 @@ for i, (name, sym) in enumerate(symbols.items()):
             """, unsafe_allow_html=True)
 
 # --- 4. AI SCANNER TABLE ---
-# Showing Sun Pharma, NTPC with AI confidence
 st.markdown("<br>### 🤖 AI POWER SCANNER (BTST/STBT)")
 stocks_data = [
     {"STOCK": "SUNPHARMA", "LTP": 1725.0, "AI CONF": "88%", "STOP LOSS": 1708.5, "TARGET": 1742.25},
