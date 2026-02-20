@@ -3,9 +3,9 @@ import yfinance as yf
 import pandas as pd
 import time
 
-st.set_page_config(page_title="TRADEX PRO V81", layout="wide")
+st.set_page_config(page_title="TRADEX PRO V82", layout="wide")
 
-# --- 1. DYNAMIC HEADER (PCR REMAINS 1.65) ---
+# --- 1. HEADER (PCR 1.65 REMAINS) ---
 pcr_val = 1.65 #
 st.markdown(f"""
     <div style='text-align:center; padding:10px; border-bottom:3px solid #00c853;'>
@@ -15,18 +15,10 @@ st.markdown(f"""
     </div>
 """, unsafe_allow_html=True)
 
-# --- 2. INDEX CARDS WITH VOLUME, RSI & LEVELS ---
+# --- 2. INDEX CARDS (VOL + RSI + LEVELS) ---
 symbols = {"NIFTY 50": "^NSEI", "SENSEX": "^BSESN", "CRUDE OIL": "CL=F", "NATURAL GAS": "NG=F"}
 st.markdown("<br>", unsafe_allow_html=True)
 cols = st.columns(4)
-
-def get_rsi(ticker_sym):
-    data = yf.Ticker(ticker_sym).history(period="1mo", interval="15m")
-    delta = data['Close'].diff()
-    gain = (delta.where(delta > 0, 0)).rolling(window=14).mean()
-    loss = (-delta.where(delta < 0, 0)).rolling(window=14).mean()
-    rs = gain / loss
-    return round(100 - (100 / (1 + rs)).iloc[-1], 2)
 
 for i, (name, sym) in enumerate(symbols.items()):
     df = yf.Ticker(sym).history(period="2d", interval="15m")
@@ -34,11 +26,7 @@ for i, (name, sym) in enumerate(symbols.items()):
         ltp = round(df['Close'].iloc[-1], 2)
         hi, lo = round(df['High'].max(), 2), round(df['Low'].min(), 2)
         sig = "BUY" if ltp > df['Close'].ewm(span=9).mean().iloc[-1] else "SELL"
-        color = "#00c853" if sig == "BUY" else "#ff1744"
-        
-        # New Volume & RSI Logic
-        vol_status = "HIGH ⚡" if df['Volume'].iloc[-1] > df['Volume'].mean() else "LOW ☁️"
-        rsi_val = get_rsi(sym)
+        color = "#00c853" if sig == "BUY" else "#ff1744" #
         
         with cols[i]:
             st.markdown(f"""
@@ -46,35 +34,37 @@ for i, (name, sym) in enumerate(symbols.items()):
                     <div style='color:gray; font-size:12px;'>{name}</div>
                     <div style='font-size:28px; font-weight:900;'>{ltp}</div>
                     <div style='background:{color}; color:white; border-radius:5px; font-weight:bold; margin:5px 0;'>{sig}</div>
-                    <div style='color:#1a237e; font-size:13px; font-weight:bold;'>VOL: {vol_status} | RSI: {rsi_val}</div>
                     <div style='color:#00c853; font-size:12px; font-weight:bold; border:1px solid #00c853; margin-top:5px; border-radius:3px; background:#e8f5e9;'>BULLISH ABOVE: {hi}</div>
                     <div style='color:#ff1744; font-size:12px; font-weight:bold; border:1px solid #ff1744; border-radius:3px; background:#ffebee;'>BEARISH BELOW: {lo}</div>
                 </div>
             """, unsafe_allow_html=True)
 
-# --- 3. POWER SCANNER (WITH NEXT TARGETS) ---
+# --- 3. POWER SCANNER (WITH D-HIGH, D-LOW & TARGETS) ---
 st.markdown("<br>### 🚀 NIFTY 50 POWER SCANNER (BTST/STBT)")
 
-def get_btst_with_targets():
-    watchlist = ["RELIANCE.NS", "TCS.NS", "HDFCBANK.NS", "SUNPHARMA.NS", "NTPC.NS"]
-    results = []
+def get_complete_signals():
+    # Top 50 Stocks selection scan
+    watchlist = ["SUNPHARMA.NS", "NTPC.NS", "AXISBANK.NS", "TITAN.NS", "RELIANCE.NS", "TCS.NS", "HDFCBANK.NS"]
+    scan_data = []
     for s in watchlist:
         df = yf.Ticker(s).history(period="1d", interval="15m")
         if not df.empty:
             ltp = round(df['Close'].iloc[-1], 2)
-            hi, lo = df['High'].max(), df['Low'].min()
-            vol_spike = round((df['Volume'].iloc[-1] / df['Volume'].mean()), 1)
+            hi, lo = round(df['High'].max(), 2), round(df['Low'].min(), 2)
+            vol_spike = round((df['Volume'].iloc[-1] / df['Volume'].mean()), 1) #
             
-            if ltp >= (hi * 0.998): # Breakout
-                target = round(ltp * 1.01, 2) # 1% Target
-                results.append({"STOCK": s.split('.')[0], "LTP": ltp, "VOL SPIKE": f"{vol_spike}x", "ACTION": "BTST ✅", "TARGET": target})
-    return pd.DataFrame(results)
+            if ltp >= (hi * 0.998): # BTST logic
+                scan_data.append({
+                    "STOCK": s.split('.')[0], "LTP": ltp, "D-HIGH": hi, "D-LOW": lo, 
+                    "VOL SPIKE": f"{vol_spike}x", "ACTION": "BTST ✅", "TARGET": round(ltp * 1.01, 2)
+                })
+    return pd.DataFrame(scan_data)
 
-df_btst = get_btst_with_targets()
-if not df_btst.empty:
-    st.table(df_btst) #
+df_final = get_complete_signals()
+if not df_final.empty:
+    st.table(df_final) #
 else:
-    st.info("Scanning for Momentum Breakouts...")
+    st.info("Scanning Market... High momentum stocks will appear here.")
 
 time.sleep(10)
 st.rerun()
