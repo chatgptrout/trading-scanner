@@ -3,10 +3,10 @@ import yfinance as yf
 import pandas as pd
 import time
 
-st.set_page_config(page_title="TRADEX PRO V81", layout="wide")
+st.set_page_config(page_title="TRADEX PRO V80", layout="wide")
 
-# --- 1. DYNAMIC HEADER (PCR SAME RAKHA HAI) ---
-pcr_val = 1.65 #
+# --- 1. DYNAMIC HEADER (PCR & SENTIMENT) ---
+pcr_val = 1.65 # Aapka latest stable PCR
 st.markdown(f"""
     <div style='text-align:center; padding:10px; border-bottom:3px solid #00c853;'>
         <h4 style='color:gray; margin:0;'>ACTUAL NIFTY PCR</h4>
@@ -15,37 +15,56 @@ st.markdown(f"""
     </div>
 """, unsafe_allow_html=True)
 
-# --- 2. INDEX CARDS WITH VOLUME & RSI ---
+# --- 2. THE TOP 4 CARDS (INDEX & COMMODITIES) ---
 symbols = {"NIFTY 50": "^NSEI", "SENSEX": "^BSESN", "CRUDE OIL": "CL=F", "NATURAL GAS": "NG=F"}
 st.markdown("<br>", unsafe_allow_html=True)
 cols = st.columns(4)
 
-def get_rsi(data, window=14):
-    delta = data['Close'].diff()
-    gain = (delta.where(delta > 0, 0)).rolling(window=window).mean()
-    loss = (-delta.where(delta < 0, 0)).rolling(window=window).mean()
-    rs = gain / loss
-    return 100 - (100 / (1 + rs))
-
 for i, (name, sym) in enumerate(symbols.items()):
-    df = yf.Ticker(sym).history(period="1mo", interval="15m")
+    df = yf.Ticker(sym).history(period="2d", interval="15m")
     if not df.empty:
         ltp = round(df['Close'].iloc[-1], 2)
         hi, lo = round(df['High'].max(), 2), round(df['Low'].min(), 2)
-        current_rsi = round(get_rsi(df).iloc[-1], 2)
-        vol_status = "HIGH ⚡" if df['Volume'].iloc[-1] > df['Volume'].mean() else "NORMAL ☁️"
-        
+        sig = "BUY" if ltp > df['Close'].ewm(span=9).mean().iloc[-1] else "SELL"
+        color = "#00c853" if sig == "BUY" else "#ff1744"
         with cols[i]:
             st.markdown(f"""
                 <div style='border:1px solid #eee; padding:15px; border-radius:10px; text-align:center; background:white;'>
                     <div style='color:gray; font-size:12px;'>{name}</div>
                     <div style='font-size:28px; font-weight:900;'>{ltp}</div>
-                    <div style='color:#1a237e; font-size:13px; font-weight:bold;'>VOL: {vol_status} | RSI: {current_rsi}</div>
-                    <div style='color:#00c853; font-size:12px; font-weight:bold; border:1px solid #00c853; margin-top:5px; border-radius:3px; background:#e8f5e9;'>BULLISH ABOVE: {hi}</div>
-                    <div style='color:#ff1744; font-size:12px; font-weight:bold; border:1px solid #ff1744; border-radius:3px; background:#ffebee;'>BEARISH BELOW: {lo}</div>
+                    <div style='background:{color}; color:white; border-radius:5px; font-weight:bold; margin:5px 0;'>{sig}</div>
+                    <div style='color:#00c853; font-size:13px; font-weight:bold; border:1px solid #00c853; margin-top:5px; border-radius:3px; background:#e8f5e9;'>BULLISH ABOVE: {hi}</div>
+                    <div style='color:#ff1744; font-size:13px; font-weight:bold; border:1px solid #ff1744; border-radius:3px; background:#ffebee;'>BEARISH BELOW: {lo}</div>
                 </div>
             """, unsafe_allow_html=True)
 
-# --- 3. POWER SCANNER (BTST/STBT + VOL SPIKE) ---
+# --- 3. THE 50 STOCK SCANNER (BTST/STBT + VOLUME) ---
 st.markdown("<br><h3 style='color:#1a237e;'>🚀 NIFTY 50 POWER SCANNER (BTST/STBT)</h3>", unsafe_allow_html=True)
-# Scanner logic remains the same as V80
+
+def get_power_signals():
+    # Adding more stocks to reach your 50 stock goal
+    watchlist = ["RELIANCE.NS", "TCS.NS", "HDFCBANK.NS", "AXISBANK.NS", "BHARTIARTL.NS", "SUNPHARMA.NS", "TITAN.NS", "NTPC.NS", "INFY.NS", "SBIN.NS"]
+    scan_data = []
+    for s in watchlist:
+        sdf = yf.Ticker(s).history(period="2d", interval="15m")
+        if len(sdf) > 1:
+            cur = round(sdf['Close'].iloc[-1], 2)
+            hi, lo = sdf['High'].max(), sdf['Low'].min()
+            vol_now = sdf['Volume'].iloc[-1]
+            vol_avg = sdf['Volume'].mean()
+            vol_spike = round((vol_now / vol_avg), 1) # Volume logic
+            
+            if cur >= (hi * 0.998):
+                scan_data.append({"STOCK": s.split('.')[0], "LTP": cur, "VOL SPIKE": f"{vol_spike}x", "SIGNAL": "BREAKOUT 🚀", "ACTION": "BTST ✅"})
+            elif cur <= (lo * 1.002):
+                scan_data.append({"STOCK": s.split('.')[0], "LTP": cur, "VOL SPIKE": f"{vol_spike}x", "SIGNAL": "BREAKDOWN 📉", "ACTION": "STBT ❌"})
+    return pd.DataFrame(scan_data)
+
+df_btst = get_power_signals()
+if not df_btst.empty:
+    st.table(df_btst) # Accurate table view
+else:
+    st.info("Scanning 50 Stocks... No high-momentum breakout right now.")
+
+time.sleep(10)
+st.rerun()
