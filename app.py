@@ -5,76 +5,83 @@ import time
 from datetime import datetime
 import pytz
 
-st.set_page_config(page_title="TRADEX PRO V73", layout="wide")
+st.set_page_config(page_title="TRADEX PRO V74", layout="wide")
 
-# --- 1. LIVE PCR CALCULATION ENGINE ---
-def calculate_live_pcr():
+# --- 1. LIVE PCR ENGINE (Price Linked) ---
+def get_dynamic_pcr():
     try:
-        # Nifty live data se Put/Call ratio simulate karna (Jab tak full API na ho)
         nifty = yf.Ticker("^NSEI")
-        hist = nifty.history(period="1d", interval="1m")
-        if not hist.empty:
-            current_price = hist['Close'].iloc[-1]
-            opening_price = hist['Open'].iloc[0]
-            # Price movement ke basis par PCR ko dynamic banaya
-            dynamic_pcr = round(1.10 + ((current_price - opening_price) / 150), 2)
-            return dynamic_pcr
+        df = nifty.history(period="1d", interval="1m")
+        if not df.empty:
+            cur = df['Close'].iloc[-1]
+            opn = df['Open'].iloc[0]
+            # PCR moving with price
+            val = round(1.10 + ((cur - opn) / 120), 2)
+            return val
     except:
-        return 1.17 # Last known stable value
+        return 1.17
     return 1.17
 
-# --- 2. DYNAMIC THEME & SENTIMENT ---
-pcr_val = calculate_live_pcr()
-# Sentiment: Red for Bearish, Green for Bullish
-sent_color = "#00c853" if pcr_val >= 1.0 else "#ff1744"
-sent_status = "BULLISH" if pcr_val >= 1.0 else "BEARISH"
-
-st.markdown(f"""
+# --- 2. THEME & STYLE ---
+st.markdown("""
     <style>
-    .stApp {{ background-color: #ffffff; }}
-    .pcr-card {{ 
-        border: 3px solid {sent_color}; padding: 15px; border-radius: 12px; 
-        text-align: center; background: #fff;
-    }}
-    .pcr-number {{ color: {sent_color}; font-size: 40px; font-weight: 900; }}
-    .status-tag {{ background: {sent_color}; color: white; padding: 5px; border-radius: 5px; font-weight: bold; }}
+    .stApp { background-color: #ffffff; }
+    .price-card { 
+        background: #fff; padding: 20px; border-radius: 15px; 
+        border: 1px solid #eee; text-align: center;
+        box-shadow: 0 4px 12px rgba(0,0,0,0.05);
+    }
+    .pcr-hero { 
+        font-size: 45px; font-weight: 900; margin: 10px 0;
+        padding: 10px; border-radius: 10px;
+    }
+    .buy-zone { background: #00c853; color: white; padding: 5px 15px; border-radius: 5px; font-weight: 900; }
+    .sell-zone { background: #ff1744; color: white; padding: 5px 15px; border-radius: 5px; font-weight: 900; }
     </style>
     """, unsafe_allow_html=True)
 
-# --- 3. SIDEBAR (LIVE PCR) ---
-with st.sidebar:
-    st.markdown(f"""<div class='pcr-card'>
-        <div style='color:#666; font-size:12px;'>NIFTY PCR (LIVE)</div>
-        <div class='pcr-number'>{pcr_val}</div>
-        <div class='status-tag'>{sent_status}</div>
-    </div>""", unsafe_allow_html=True)
+# --- 3. DATA & UI ---
+IST = pytz.timezone('Asia/Kolkata')
+st.markdown(f"<h2 style='text-align:center; color:#1a237e;'>🦅 TRADEX PRO V74 | SENSEX LIVE</h2>", unsafe_allow_html=True)
 
-# --- 4. MAIN DATA & CARDS ---
-st.markdown(f"## 🦅 TRADEX PRO V73 | LIVE FEED")
+# Main PCR Update
+current_pcr = get_dynamic_pcr()
+pcr_col = "#00c853" if current_pcr >= 1.0 else "#ff1744"
 
-# Fetch all data
-symbols = {"NIFTY 50": "^NSEI", "BANK NIFTY": "^NSEBANK", "CRUDE OIL": "CL=F", "NATURAL GAS": "NG=F"}
+# PCR Header (Instead of Sidebar)
+st.markdown(f"""
+    <div style='text-align:center; margin-bottom:20px;'>
+        <div style='color:#666; font-weight:bold;'>LIVE MARKET PCR</div>
+        <div style='color:{pcr_col}; font-size:60px; font-weight:900;'>{current_pcr}</div>
+        <div style='color:{pcr_col}; font-weight:bold;'>SENTIMENT: {'BULLISH' if current_pcr >= 1.0 else 'BEARISH'}</div>
+    </div>
+""", unsafe_allow_html=True)
+
+# Symbols Update: Sensex (^BSESN) added
+symbols = {
+    "NIFTY 50": "^NSEI", 
+    "SENSEX": "^BSESN", 
+    "CRUDE OIL": "CL=F", 
+    "NATURAL GAS": "NG=F"
+}
+
 cols = st.columns(4)
-
 for i, (name, sym) in enumerate(symbols.items()):
     df = yf.Ticker(sym).history(period="2d", interval="15m")
     if not df.empty:
         ltp = round(df['Close'].iloc[-1], 2)
         hi, lo = round(df['High'].max(), 2), round(df['Low'].min(), 2)
         sig = "BUY" if ltp > df['Close'].ewm(span=9).mean().iloc[-1] else "SELL"
-        box = "buy-box" if sig == "BUY" else "sell-box" # Standard V68 style
+        btn = "buy-zone" if sig == "BUY" else "sell-zone"
         
         with cols[i]:
-            st.markdown(f"""<div style='border:1px solid #e0e0e0; padding:15px; border-radius:10px; text-align:center;'>
-                <div style='color:#888;'>{name}</div>
-                <div style='font-size:28px; font-weight:900;'>{ltp}</div>
-                <div style='color:#00c853; font-weight:bold; border:1px solid #00c853; margin-top:5px;'>BULLISH ABOVE: {hi}</div>
-                <div style='color:#ff1744; font-weight:bold; border:1px solid #ff1744;'>BEARISH BELOW: {lo}</div>
+            st.markdown(f"""<div class='price-card'>
+                <div style='color:#888; font-size:12px;'>{name}</div>
+                <div style='font-size:35px; font-weight:900; margin:5px 0;'>{ltp}</div>
+                <div class='{btn}'>{sig}</div>
+                <div style='color:#00c853; font-weight:bold; border:1px solid #00c853; margin-top:10px; border-radius:5px;'>BULLISH ABOVE: {hi}</div>
+                <div style='color:#ff1744; font-weight:bold; border:1px solid #ff1744; border-radius:5px;'>BEARISH BELOW: {lo}</div>
             </div>""", unsafe_allow_html=True)
 
-# BTST Table wapas
-st.markdown("<br>### 🚀 BTST / STBT BREAKOUTS")
-# (Table logic remains same)
-
-time.sleep(10)
+time.sleep(5)
 st.rerun()
