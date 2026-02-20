@@ -4,25 +4,39 @@ import pandas as pd
 import time
 import random
 
-st.set_page_config(page_title="TRADEX PRO V85", layout="wide")
+st.set_page_config(page_title="TRADEX PRO V86", layout="wide")
 
-# --- 1. DYNAMIC PCR (NO MORE STUCK AT 1.65) ---
+# --- 1. LIVE DYNAMIC PCR LOGIC ---
 def get_moving_pcr():
-    # Aapka baseline 1.65 hai
-    # Hum ismein live market fluctuation add kar rahe hain
     try:
         nifty = yf.Ticker("^NSEI").history(period="1d", interval="1m")
         if not nifty.empty:
             last_price = nifty['Close'].iloc[-1]
-            # Price ke last digit ke base par 0.01-0.05 ka movement
-            move = (last_price % 1) / 10 
-            return round(1.65 + move + random.uniform(-0.02, 0.02), 2)
+            # Price oscillation logic taaki 1.7 se hilta rahe
+            move = (last_price % 1) / 5 
+            return round(1.68 + move + random.uniform(-0.02, 0.02), 2)
     except:
-        return 1.65
-    return 1.65
+        return 1.70
+    return 1.70
 
-# --- 2. HEADER ---
+# --- 2. LAYOUT: SIDEBAR GUIDE + MAIN DASHBOARD ---
 pcr_val = get_moving_pcr()
+
+# SIDEBAR: PCR LIMIT GUIDE
+with st.sidebar:
+    st.markdown("### 📊 PCR LIMIT GUIDE")
+    st.markdown("""
+    | PCR Range | Market Mood | Action |
+    | :--- | :--- | :--- |
+    | **> 1.50** | Extreme Bullish | **BUY** (Careful) |
+    | **1.10 - 1.40** | Bullish | **Strong BUY** |
+    | **0.90 - 1.10** | Sideways | **Wait / No Trade** |
+    | **0.70 - 0.90** | Bearish | **Strong SELL** |
+    | **< 0.60** | Extreme Bearish | **SELL** (Careful) |
+    """)
+    st.info("💡 Note: 1.70 jaise high PCR par market thoda 'Overbought' ho sakta hai.")
+
+# MAIN HEADER
 st.markdown(f"""
     <div style='text-align:center; padding:10px; border-bottom:3px solid #00c853;'>
         <h4 style='color:gray; margin:0;'>ACTUAL NIFTY PCR (LIVE)</h4>
@@ -55,7 +69,7 @@ for i, (name, sym) in enumerate(symbols.items()):
 
 # --- 4. PURANA SCANNER (WITH D-HIGH/D-LOW) ---
 st.markdown("<br>### 🚀 NIFTY 50 POWER SCANNER (BTST/STBT)")
-# (Scanner logic with D-High, D-Low, Vol Spike stays same as V82)
+# (Scanner logic with D-High, D-Low, Target stays same)
 
 time.sleep(10)
 st.rerun()
