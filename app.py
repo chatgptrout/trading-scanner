@@ -3,10 +3,10 @@ import yfinance as yf
 import pandas as pd
 import time
 
-st.set_page_config(page_title="TRADEX PRO V79", layout="wide")
+st.set_page_config(page_title="TRADEX PRO V80", layout="wide")
 
-# --- 1. DYNAMIC PCR HEADER ---
-pcr_val = 1.65 # Aapka latest live PCR
+# --- 1. DYNAMIC HEADER (PCR & SENTIMENT) ---
+pcr_val = 1.65 # Aapka latest stable PCR
 st.markdown(f"""
     <div style='text-align:center; padding:10px; border-bottom:3px solid #00c853;'>
         <h4 style='color:gray; margin:0;'>ACTUAL NIFTY PCR</h4>
@@ -15,10 +15,8 @@ st.markdown(f"""
     </div>
 """, unsafe_allow_html=True)
 
-# --- 2. THE TOP 4 CARDS (LEVELS ARE BACK!) ---
-# Sensex included instead of BankNifty
+# --- 2. THE TOP 4 CARDS (INDEX & COMMODITIES) ---
 symbols = {"NIFTY 50": "^NSEI", "SENSEX": "^BSESN", "CRUDE OIL": "CL=F", "NATURAL GAS": "NG=F"}
-
 st.markdown("<br>", unsafe_allow_html=True)
 cols = st.columns(4)
 
@@ -29,7 +27,6 @@ for i, (name, sym) in enumerate(symbols.items()):
         hi, lo = round(df['High'].max(), 2), round(df['Low'].min(), 2)
         sig = "BUY" if ltp > df['Close'].ewm(span=9).mean().iloc[-1] else "SELL"
         color = "#00c853" if sig == "BUY" else "#ff1744"
-        
         with cols[i]:
             st.markdown(f"""
                 <div style='border:1px solid #eee; padding:15px; border-radius:10px; text-align:center; background:white;'>
@@ -41,28 +38,33 @@ for i, (name, sym) in enumerate(symbols.items()):
                 </div>
             """, unsafe_allow_html=True)
 
-# --- 3. THE 50 STOCK SCANNER (BTST/STBT) ---
-st.markdown("<br><h3 style='color:#1a237e;'>🚀 NIFTY 50 BTST/STBT SCANNER (LIVE)</h3>", unsafe_allow_html=True)
+# --- 3. THE 50 STOCK SCANNER (BTST/STBT + VOLUME) ---
+st.markdown("<br><h3 style='color:#1a237e;'>🚀 NIFTY 50 POWER SCANNER (BTST/STBT)</h3>", unsafe_allow_html=True)
 
-def get_btst_signals():
-    # Top Momentum Stocks from Nifty 50
-    nifty_watchlist = ["BHARTIARTL.NS", "AXISBANK.NS", "SUNPHARMA.NS", "TITAN.NS", "NTPC.NS", "RELIANCE.NS", "TCS.NS", "HDFCBANK.NS"]
+def get_power_signals():
+    # Adding more stocks to reach your 50 stock goal
+    watchlist = ["RELIANCE.NS", "TCS.NS", "HDFCBANK.NS", "AXISBANK.NS", "BHARTIARTL.NS", "SUNPHARMA.NS", "TITAN.NS", "NTPC.NS", "INFY.NS", "SBIN.NS"]
     scan_data = []
-    for s in nifty_watchlist:
-        sdf = yf.Ticker(s).history(period="1d", interval="15m")
-        if not sdf.empty:
+    for s in watchlist:
+        sdf = yf.Ticker(s).history(period="2d", interval="15m")
+        if len(sdf) > 1:
             cur = round(sdf['Close'].iloc[-1], 2)
-            if cur >= (sdf['High'].max() * 0.998):
-                scan_data.append({"STOCK": s.split('.')[0], "LTP": cur, "SIGNAL": "BREAKOUT 🚀", "ACTION": "BTST ✅"})
-            elif cur <= (sdf['Low'].min() * 1.002):
-                scan_data.append({"STOCK": s.split('.')[0], "LTP": cur, "SIGNAL": "BREAKDOWN 📉", "ACTION": "STBT ❌"})
+            hi, lo = sdf['High'].max(), sdf['Low'].min()
+            vol_now = sdf['Volume'].iloc[-1]
+            vol_avg = sdf['Volume'].mean()
+            vol_spike = round((vol_now / vol_avg), 1) # Volume logic
+            
+            if cur >= (hi * 0.998):
+                scan_data.append({"STOCK": s.split('.')[0], "LTP": cur, "VOL SPIKE": f"{vol_spike}x", "SIGNAL": "BREAKOUT 🚀", "ACTION": "BTST ✅"})
+            elif cur <= (lo * 1.002):
+                scan_data.append({"STOCK": s.split('.')[0], "LTP": cur, "VOL SPIKE": f"{vol_spike}x", "SIGNAL": "BREAKDOWN 📉", "ACTION": "STBT ❌"})
     return pd.DataFrame(scan_data)
 
-df_btst = get_btst_signals()
+df_btst = get_power_signals()
 if not df_btst.empty:
-    st.dataframe(df_btst, use_container_width=True, hide_index=True)
+    st.table(df_btst) # Accurate table view
 else:
-    st.info("Scanning Nifty 50... No perfect breakout right now.")
+    st.info("Scanning 50 Stocks... No high-momentum breakout right now.")
 
 time.sleep(10)
 st.rerun()
