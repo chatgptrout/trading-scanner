@@ -6,85 +6,79 @@ import time
 from datetime import datetime
 import pytz
 
-# Page configuration
-st.set_page_config(page_title="NIFTY DESI POWER", layout="wide")
+st.set_page_config(page_title="NIFTY COMPACT PRO", layout="wide")
 
-# --- 1. THE WATCH ---
+# --- 1. COMPACT HEADER & WATCH ---
 now = datetime.now(pytz.timezone('Asia/Kolkata'))
-st.markdown(f"<div style='text-align:right;'><h3 style='color:#888;'>⌚ {now.strftime('%I:%M:%S %p')}</h3></div>", unsafe_allow_html=True)
+h1, h2 = st.columns([8, 2])
+with h2:
+    st.markdown(f"<p style='text-align:right; color:gray; margin:0;'>⌚ {now.strftime('%I:%M:%S %p')}</p>", unsafe_allow_html=True)
 
-# --- 2. GLOWING PCR CIRCLE (PURE DESI STYLE) ---
-pcr_val = 2.01 # Latest data
-# Red for Danger (>1.5), Green for Mauj (<1.0)
+# --- 2. PCR & NIFTY CHART (SIDE BY SIDE FOR SPACE) ---
+pcr_val = 2.01 
 pcr_color = "#ff0033" if pcr_val > 1.5 else "#00ff66"
-glow_style = f"box-shadow: 0 0 50px {pcr_color}, inset 0 0 20px {pcr_color};"
 
-st.markdown(f"""
-    <div style='display: flex; justify-content: center; align-items: center; flex-direction: column; padding: 40px;'>
-        <div style='width: 280px; height: 280px; border-radius: 50%; border: 8px solid {pcr_color}; 
-                    display: flex; justify-content: center; align-items: center; background: #000;
-                    {glow_style}'>
-            <div style='text-align: center;'>
-                <h1 style='color: white; font-size: 85px; margin: 0; font-family: sans-serif;'>{pcr_val}</h1>
-                <p style='color: {pcr_color}; font-size: 18px; font-weight: bold; margin: 0; letter-spacing: 2px;'>NIFTY PCR</p>
+col_left, col_right = st.columns([1, 4]) # Chart gets 80% space
+
+with col_left:
+    # Compact Glowing PCR Circle
+    st.markdown(f"""
+        <div style='display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100%;'>
+            <div style='width: 160px; height: 160px; border-radius: 50%; border: 6px solid {pcr_color}; 
+                        display: flex; justify-content: center; align-items: center; background: #000;
+                        box-shadow: 0 0 30px {pcr_color};'>
+                <div style='text-align: center;'>
+                    <h1 style='color: white; font-size: 45px; margin: 0;'>{pcr_val}</h1>
+                    <p style='color: {pcr_color}; font-size: 12px; font-weight: bold; margin: 0;'>PCR</p>
+                </div>
             </div>
+            <div style='margin-top: 15px; background: {pcr_color}; color: white; padding: 5px 20px; 
+                        border-radius: 20px; font-size: 14px; font-weight: bold;'>SAVDHAN ⚠️</div>
         </div>
-        <div style='margin-top: 30px; background: {pcr_color}; color: white; padding: 12px 60px; 
-                    border-radius: 50px; font-size: 28px; font-weight: bold; box-shadow: 0 4px 15px rgba(0,0,0,0.5);'>
-            {'BEARISH: SAVDHAN ⚠️' if pcr_val > 1.5 else 'BULLISH: MAUJ ✅'}
-        </div>
-    </div>
-""", unsafe_allow_html=True)
+    """, unsafe_allow_html=True)
 
-# --- 3. NIFTY 50 LIVE CANDLES (CLEAN VIEW) ---
-st.markdown("<br>## 🕯️ NIFTY 50 (REAL-TIME PRICE ACTION)")
-
-def draw_nifty_clean():
+with col_right:
+    # High Clarity Candle Graph
     df = yf.Ticker("^NSEI").history(period="1d", interval="5m")
     if not df.empty:
         fig = go.Figure(data=[go.Candlestick(
             x=df.index, open=df['Open'], high=df['High'], 
             low=df['Low'], close=df['Close'], name='Price'
         )])
-        
-        # Yellow Trend Line (MA20)
         df['MA20'] = df['Close'].rolling(window=20).mean()
         fig.add_trace(go.Scatter(x=df.index, y=df['MA20'], name='Trend', line=dict(color='yellow', width=2)))
         
-        # Formatting Y-axis to avoid '25k' - Hardcoded
         fig.update_layout(
-            template="plotly_dark", 
-            xaxis_rangeslider_visible=False, 
-            height=500,
-            yaxis=dict(tickformat='.2f', title="Price (No Shortcuts)")
+            template="plotly_dark", xaxis_rangeslider_visible=False, 
+            height=450, margin=dict(l=10, r=10, t=10, b=10),
+            yaxis=dict(tickformat='.2f', side="right") # Price on right for better view
         )
         st.plotly_chart(fig, use_container_width=True)
 
-draw_nifty_clean()
-
-# --- 4. THE SPOT PRICE (ULTRA BOLD - NO SHORTCUTS) ---
+# --- 3. FLOATING PRICE BAR (NO 25K SHORTCUT) ---
 st.markdown("---")
 df_n = yf.Ticker("^NSEI").history(period="1d", interval="1m")
 if not df_n.empty:
     ltp = df_n['Close'].iloc[-1]
-    # Forced formatting: 25565.90 style
+    # Forced full number formatting
     price_full = "{:,.2f}".format(ltp)
-    hi_full = "{:,.2f}".format(df_n['High'].max())
-    lo_full = "{:,.2f}".format(df_n['Low'].min())
+    hi_val = "{:,.2f}".format(df_n['High'].max())
+    lo_val = "{:,.2f}".format(df_n['Low'].min())
     
     st.markdown(f"""
-        <div style='background: #000; padding: 50px; border-radius: 25px; text-align: center; border: 4px solid {pcr_color};'>
-            <h2 style='color: #888; margin: 0; font-family: monospace;'>NIFTY 50 SPOT PRICE</h2>
-            <h1 style='color: white; font-size: 120px; margin: 15px 0; font-family: serif; letter-spacing: -2px;'>{price_full}</h1>
-            <div style='display: flex; justify-content: center; gap: 80px; border-top: 1px solid #333; padding-top: 20px;'>
-                <div>
-                    <p style='color: #00c853; font-size: 18px; margin: 0;'>BULLISH ABOVE</p>
-                    <h2 style='color: white; margin: 0;'>{hi_full}</h2>
-                </div>
-                <div>
-                    <p style='color: #ff1744; font-size: 18px; margin: 0;'>BEARISH BELOW</p>
-                    <h2 style='color: white; margin: 0;'>{lo_full}</h2>
-                </div>
+        <div style='background: #000; padding: 15px; border-radius: 10px; display: flex; 
+                    justify-content: space-around; align-items: center; border-left: 10px solid {pcr_color};'>
+            <div style='text-align: left;'>
+                <p style='color: gray; margin: 0; font-size: 12px;'>NIFTY 50 SPOT</p>
+                <h1 style='color: white; margin: 0; font-size: 40px;'>{price_full}</h1>
+            </div>
+            <div style='text-align: center;'>
+                <p style='color: #00c853; margin: 0; font-size: 12px;'>BULLISH ABOVE</p>
+                <h3 style='color: white; margin: 0;'>{hi_val}</h3>
+            </div>
+            <div style='text-align: center;'>
+                <p style='color: #ff1744; margin: 0; font-size: 12px;'>BEARISH BELOW</p>
+                <h3 style='color: white; margin: 0;'>{lo_val}</h3>
             </div>
         </div>
     """, unsafe_allow_html=True)
