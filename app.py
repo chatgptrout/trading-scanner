@@ -20,7 +20,7 @@ st.markdown(f"""
     </div>
 """, unsafe_allow_html=True)
 
-# --- 3. PROFESSIONAL CANDLESTICK FUNCTION ---
+# --- 3. ADVANCED CANDLESTICK WITH SR ZONES ---
 def draw_pro_candles(symbol, title):
     df = yf.Ticker(symbol).history(period="1d", interval="5m")
     if not df.empty:
@@ -30,22 +30,28 @@ def draw_pro_candles(symbol, title):
             low=df['Low'], close=df['Close'],
             name='Price'
         )])
-        # Adding a 20-period Moving Average for trend
+        
+        # Adding Trend Line (MA20)
         df['MA20'] = df['Close'].rolling(window=20).mean()
-        fig.add_trace(go.Scatter(x=df.index, y=df['MA20'], name='Trend Line', line=dict(color='yellow', width=1.5)))
+        fig.add_trace(go.Scatter(x=df.index, y=df['MA20'], name='Trend Line', line=dict(color='yellow', width=2)))
+        
+        # Highlighting Support & Resistance Zones
+        hi_val, lo_val = df['High'].max(), df['Low'].min()
+        fig.add_hline(y=hi_val, line_dash="dash", line_color="red", annotation_text="RESISTANCE")
+        fig.add_hline(y=lo_val, line_dash="dash", line_color="green", annotation_text="SUPPORT")
         
         fig.update_layout(title=title, template="plotly_dark", xaxis_rangeslider_visible=False, height=500)
         st.plotly_chart(fig, use_container_width=True)
 
-st.markdown("<br>## 🕯️ LIVE CANDLESTICK & TREND ANALYSIS")
+st.markdown("<br>## 🕯️ LIVE CANDLESTICK & S/R ZONES")
 c1, c2 = st.columns(2)
 
 with c1:
-    draw_pro_candles("^NSEI", "NIFTY 50 (5-MIN CANDLES)")
+    draw_pro_candles("^NSEI", "NIFTY 50 (S/R ANALYSIS)")
 with c2:
-    draw_pro_candles("CL=F", "CRUDE OIL (5-MIN CANDLES)")
+    draw_pro_candles("CL=F", "CRUDE OIL (S/R ANALYSIS)")
 
-# --- 4. LIVE DATA CARDS ---
+# --- 4. LIVE TICKER CARDS ---
 # Nifty: 25565.90 | Crude: 66.31 | NG: 2.994
 st.markdown("---")
 cols = st.columns(3)
@@ -57,7 +63,7 @@ for i, (name, sym) in enumerate(symbols.items()):
         ltp = df['Close'].iloc[-1]
         hi, lo = df['High'].max(), df['Low'].min()
         
-        # Precision Match for Natural Gas
+        # Natural Gas Match logic
         if name == "NATURAL GAS":
             ltp = max(ltp, 2.994) if ltp < 2.99 else ltp
             price_str = f"{ltp:.3f}"
@@ -66,7 +72,7 @@ for i, (name, sym) in enumerate(symbols.items()):
 
         with cols[i]:
             st.markdown(f"""
-                <div style='background:#1e1e1e; padding:20px; border-radius:10px; text-align:center; color:white;'>
+                <div style='background:#1e1e1e; padding:20px; border-radius:10px; text-align:center; color:white; border:1px solid #333;'>
                     <h5 style='color:gray;'>{name}</h5>
                     <h2 style='margin:0;'>{price_str}</h2>
                     <p style='color:#00c853;'>BULLISH > {hi:.2f}</p>
