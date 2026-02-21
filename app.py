@@ -32,7 +32,6 @@ if not df.empty:
     """, unsafe_allow_html=True)
 
 # --- 3. 5-MIN CHART WITH EMA 9 (BLUE) & 20 (YELLOW) ---
-# Timeframe confirm: 5-min candles
 df_c = yf.Ticker("^NSEI").history(period="1d", interval="5m")
 if not df_c.empty:
     df_c['EMA9'] = df_c['Close'].ewm(span=9, adjust=False).mean() # Blue
