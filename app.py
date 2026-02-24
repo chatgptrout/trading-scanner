@@ -20,9 +20,7 @@ def get_verified_market_data():
         ticker = yf.Ticker("^NSEI")
         # Today's data only to fix the 'Monday/Tuesday lag'
         df = ticker.history(period="1d", interval="1m")
-        
-        if df.empty:
-            return None
+        if df.empty: return None
         
         ltp = df['Close'].iloc[-1]
         hi = df['High'].max() # Current Day High
@@ -30,10 +28,8 @@ def get_verified_market_data():
         
         # Live Moving PCR based on volume proxy
         pcr = round(1.08 + random.uniform(-0.05, 0.05), 2)
-        
         return {"ltp": ltp, "hi": hi, "lo": lo, "pcr": pcr}
-    except:
-        return None
+    except: return None
 
 # --- 3. UI LAYOUT ---
 st.title("🛡️ TRADEX V2.0 | LIVE TERMINAL")
@@ -42,10 +38,8 @@ st.title("🛡️ TRADEX V2.0 | LIVE TERMINAL")
 st.subheader("SECTOR SCOPE ● LIVE")
 sector_data = {"IT": 3.46, "SENSEX": 0.95, "REALTY": 0.92, "NIFTY 50": 0.87, "MEDIA": 0.85}
 df_sec = pd.DataFrame(list(sector_data.items()), columns=['Sector', 'Change%']).sort_values('Change%', ascending=False)
-fig = px.bar(df_sec, x='Sector', y='Change%', text='Change%', color='Change%', 
-             color_continuous_scale='Blues', template="plotly_dark")
-fig.update_layout(height=250, margin=dict(l=0,r=0,t=10,b=0), showlegend=False, 
-                  paper_bgcolor='rgba(0,0,0,0)', plot_bgcolor='rgba(0,0,0,0)')
+fig = px.bar(df_sec, x='Sector', y='Change%', text='Change%', color='Change%', color_continuous_scale='Blues', template="plotly_dark")
+fig.update_layout(height=250, margin=dict(l=0,r=0,t=10,b=0), showlegend=False, paper_bgcolor='rgba(0,0,0,0)', plot_bgcolor='rgba(0,0,0,0)')
 st.plotly_chart(fig, use_container_width=True) #
 
 # Middle Section: Live Nifty & Option Signals
@@ -53,8 +47,8 @@ data = get_verified_market_data()
 if data:
     c1, c2, c3 = st.columns(3)
     c1.metric("NIFTY 50 LIVE", f"{data['ltp']:,.2f}", f"PCR: {data['pcr']}")
-    c2.metric("BUY ABOVE (CE)", f"{data['hi']:,.2f}", "Bullish Level", delta_color="normal")
-    c3.metric("SELL BELOW (PE)", f"{data['lo']:,.2f}", "Bearish Level", delta_color="inverse")
+    c2.metric("BUY ABOVE (CE)", f"{data['hi']:,.2f}", "Today's High", delta_color="normal")
+    c3.metric("SELL BELOW (PE)", f"{data['lo']:,.2f}", "Today's Low", delta_color="inverse")
 
     # --- 4. OPTION BUYING SIGNAL ---
     pcr_val = data['pcr']
@@ -75,7 +69,5 @@ with col_b:
     st.error("❄️ **STBT**: INFY (Target -1.5%)")
 
 st.caption(f"Last Sync: {datetime.now().strftime('%I:%M:%S %p')} | Status: Live Syncing...")
-
-# Auto-Refresh to prevent freeze
 time.sleep(15)
 st.rerun()
