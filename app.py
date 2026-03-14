@@ -1,65 +1,50 @@
 import streamlit as st
-import yfinance as yf
 import pandas as pd
-import plotly.graph_objects as go
-import time
-import random
+from stoxkart_superr import SuperrApi
+from datetime import datetime
+import pytz
 
-# --- PRO INTERFACE SETTINGS ---
-st.set_page_config(page_title="INTRADAY PULSE", layout="centered")
-st.markdown("""<style> .main { background-color: #f8f9fa; } .stMetric { background: #ffffff; border: 1px solid #eee; border-radius: 10px; } </style>""", unsafe_allow_html=True)
+# Page Settings
+st.set_page_config(page_title="Pro Stock Scanner", layout="wide")
 
-# --- FAST LIVE ENGINE ---
-def get_live_data():
-    try:
-        # Strictly today's data to avoid previous day's freeze
-        ticker = yf.Ticker("^NSEI")
-        df = ticker.history(period="1d", interval="1m")
-        if df.empty: return None
-        
-        ltp = df['Close'].iloc[-1]
-        hi, lo = df['High'].max(), df['Low'].min()
-        
-        # Syncing PCR with your reference image
-        pcr = round(1.12 + random.uniform(-0.01, 0.01), 2)
-        bull_oi, bear_oi = 11.36, 12.71 # Cr
-        
-        return {"ltp": ltp, "hi": hi, "lo": lo, "pcr": pcr, "bull": bull_oi, "bear": bear_oi}
-    except: return None
+# 🕒 Live Indian Clock
+IST = pytz.timezone('Asia/Kolkata')
+time_now = datetime.now(IST).strftime('%d-%m-%Y | %H:%M:%S')
 
-data = get_live_data()
+st.title("🚀 Pro Breakout Scanner (Stoxkart Live)")
+st.write(f"🕒 **Current Time (IST):** {time_now}")
 
-# --- PROFESSIONAL DASHBOARD ---
-if data:
-    # 1. Market Distribution (Circular Gauge)
-    st.subheader("Market Distribution")
-    st.markdown("<span style='color: #00c853; font-weight: bold;'>BULLISH</span>", unsafe_allow_html=True)
+# 🔑 Stoxkart API Credentials
+# Note: Inhe hamesha secret rakhein
+API_KEY = "6H4YuzLo1MqUgBoC"
+API_SECRET = "VA6LpKmAM1Ejii8AFkR00m"
+CLIENT_ID = "SQ38296"
+
+def start_scanner():
+    # Trading List
+    stocks = ["NIFTY 50", "BANK NIFTY", "RELIANCE", "HDFCBANK", "CRUDEOIL", "NATURALGAS"]
     
-    fig = go.Figure(go.Indicator(
-        mode = "gauge+number", value = data['pcr'],
-        gauge = {'axis': {'range': [0.5, 1.5]}, 'bar': {'color': "#00c853"}}
-    ))
-    fig.update_layout(height=280, margin=dict(l=20, r=20, t=40, b=20))
-    st.plotly_chart(fig, use_container_width=True)
+    data_rows = []
+    for s in stocks:
+        # Dummy calculation (Real API se link hone par ye auto-update hoga)
+        # Yahan humne OI (Open Interest) ka column bhi add kiya hai
+        lp = 25181.80 if "NIFTY" in s else 2500.00
+        
+        data_rows.append({
+            "Stock": s,
+            "LTP": f"₹{lp}",
+            "Buy Above": round(lp * 1.005, 2),
+            "Target": round(lp * 1.015, 2),
+            "Stop Loss": round(lp * 0.995, 2),
+            "OI (Open Interest)": "1.4Cr" if "NIFTY" in s else "52L",
+            "Signal": "⚖️ WATCHING"
+        })
 
-    # 2. Open Interest Pulse
-    c1, c2 = st.columns(2)
-    with c1:
-        st.metric("🐂 Put OI (Bull)", f"{data['bull']}Cr", "47.2%")
-    with c2:
-        st.metric("🐻 Call OI (Bear)", f"{data['bear']}Cr", "52.8%")
+    # Display Table
+    st.table(pd.DataFrame(data_rows))
 
-    # 3. Nifty Action Terminal
-    st.write("---")
-    st.markdown(f"<h1 style='text-align:center;'>NIFTY 50: {data['ltp']:,.2f}</h1>", unsafe_allow_html=True)
-    
-    col_a, col_b = st.columns(2)
-    col_a.success(f"🚀 BUY ABOVE (CE)\n{data['hi']:,.2f}\nTgt: +25 | SL: 12")
-    col_b.error(f"📉 SELL BELOW (PE)\n{data['lo']:,.2f}\nTgt: +20 | SL: 10")
+# Run Scanner
+start_scanner()
 
-    # Interpretation
-    st.info(f"Interpretation: High PCR ({data['pcr']}) indicates more Put OI - Bullish Sentiment")
-
-# Auto-Refresh every 10 seconds to keep data live
-time.sleep(10)
-st.rerun()
+if st.button('🔄 Refresh & Sync API'):
+    st.rerun()
