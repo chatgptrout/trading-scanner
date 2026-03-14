@@ -1,3 +1,6 @@
 yfinance
 streamlit
 plotly
+stoxkart-superr
+pandas
+pytz
